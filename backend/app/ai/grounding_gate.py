@@ -30,7 +30,7 @@ class GroundingGate:
         confidence = retrieval_result.get("grounding_confidence", 0.0)
 
         # Check if no matching evidence found in course
-        if not results or confidence < 0.25:
+        if not results or confidence < 0.28:
             return {
                 "status": "UNSUPPORTED",
                 "confidence": confidence,
@@ -84,6 +84,7 @@ class GroundingGate:
             citations.append({
                 "knowledge_unit_id": u.get("knowledge_unit_id"),
                 "source_type": stype,
+                "source_file": sfile,
                 "document": sfile,
                 "location_label": loc_label,
                 "location_data": src,

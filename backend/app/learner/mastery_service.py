@@ -256,3 +256,6 @@ class LearnerMasteryService:
             "prerequisite_gaps": prereq_weaknesses[:3],
             "recommended_actions": action_plan
         }
+
+MasteryService = LearnerMasteryService
+

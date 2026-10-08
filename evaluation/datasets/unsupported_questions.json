@@ -1,0 +1,34 @@
+[
+  {
+    "id": "uq_01",
+    "course_id": "OS_101",
+    "query": "What is the historical stock price of Apple Inc. in 1999?",
+    "expected_status": "UNSUPPORTED",
+    "should_refuse": true,
+    "category": "out_of_domain"
+  },
+  {
+    "id": "uq_02",
+    "course_id": "OS_101",
+    "query": "According to Chapter 7 of this textbook, explain quantum chromodynamics and gluon binding energies.",
+    "expected_status": "UNSUPPORTED",
+    "should_refuse": true,
+    "category": "fabricated_reference"
+  },
+  {
+    "id": "uq_03",
+    "course_id": "OS_101",
+    "query": "Give me a recipe for chocolate chip cookies using deadlock avoidance principles.",
+    "expected_status": "UNSUPPORTED",
+    "should_refuse": true,
+    "category": "nonsensical_prompt"
+  },
+  {
+    "id": "uq_04",
+    "course_id": "OS_101",
+    "query": "What is the fifth Coffman condition that was discovered in 2024?",
+    "expected_status": "UNSUPPORTED",
+    "should_refuse": true,
+    "category": "adversarial_misinformation"
+  }
+]

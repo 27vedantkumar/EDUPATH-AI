@@ -137,7 +137,11 @@ class HybridRetriever:
         best_vector_sim = vector_hits[0]["score"] if vector_hits else 0.0
         best_bm25_score = bm25_hits[0]["score"] if bm25_hits else 0.0
         
-        grounding_confidence = round(0.6 * best_vector_sim + 0.4 * best_bm25_score, 4)
+        # If there is zero lexical overlap and moderate/low semantic similarity, reduce confidence to refuse out-of-domain queries
+        if best_bm25_score <= 0.0 and best_vector_sim < 0.70:
+            grounding_confidence = round(best_vector_sim * 0.35, 4)
+        else:
+            grounding_confidence = round(0.6 * best_vector_sim + 0.4 * best_bm25_score, 4)
         is_grounded = grounding_confidence >= 0.50
 
         return {

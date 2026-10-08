@@ -1,0 +1,42 @@
+[
+  {
+    "id": "gq_01",
+    "course_id": "OS_101",
+    "query": "What four conditions must hold simultaneously for a deadlock to occur according to Coffman?",
+    "expected_status": "SUPPORTED",
+    "expected_answer_keywords": ["Mutual Exclusion", "Hold and Wait", "No Preemption", "Circular Wait"],
+    "expected_citations": [
+      {"document": "Operating Systems.pdf", "page": 42}
+    ]
+  },
+  {
+    "id": "gq_02",
+    "course_id": "OS_101",
+    "query": "What is the primary role of Dijkstra's Banker's Algorithm in an operating system?",
+    "expected_status": "SUPPORTED",
+    "expected_answer_keywords": ["deadlock avoidance", "safe state", "allocation", "safe sequence"],
+    "expected_citations": [
+      {"document": "OS_Lecture7.pptx", "slide": 18}
+    ]
+  },
+  {
+    "id": "gq_03",
+    "course_id": "OS_101",
+    "query": "How is a Safe State formally defined in deadlock avoidance?",
+    "expected_status": "SUPPORTED",
+    "expected_answer_keywords": ["safe sequence", "current allocation", "available resources"],
+    "expected_citations": [
+      {"document": "Operating Systems.pdf", "page": 42}
+    ]
+  },
+  {
+    "id": "gq_04",
+    "course_id": "OS_101",
+    "query": "At what timestamp does the lecture cover safe state examples and Dijkstra's algorithm?",
+    "expected_status": "SUPPORTED",
+    "expected_answer_keywords": ["22:17", "23:05", "Banker's Algorithm", "safe sequence"],
+    "expected_citations": [
+      {"document": "Lecture7_Video_Recording.mp4", "timestamp": "22:17"}
+    ]
+  }
+]

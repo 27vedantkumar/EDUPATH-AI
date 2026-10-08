@@ -1,0 +1,60 @@
+[
+  {
+    "id": "aq_01",
+    "topic": "Deadlocks",
+    "concept": "Coffman Conditions",
+    "question": "Which of the following is NOT one of the four Coffman conditions required for deadlock?",
+    "options": [
+      {"id": "A", "text": "Mutual Exclusion"},
+      {"id": "B", "text": "Preemption of Allocated Resources"},
+      {"id": "C", "text": "Hold and Wait"},
+      {"id": "D", "text": "Circular Wait"}
+    ],
+    "correct_option": "B",
+    "explanation": "No preemption is required for deadlock; active preemption actually breaks deadlock conditions.",
+    "misconception_distractors": {
+      "B": null,
+      "A": "Believes mutual exclusion can be bypassed without concurrency control",
+      "C": "Confuses hold and wait with resource starvation",
+      "D": "Does not recognize circular wait as a formal requirement"
+    }
+  },
+  {
+    "id": "aq_02",
+    "topic": "Deadlocks",
+    "concept": "Safe State",
+    "question": "If an operating system enters an 'Unsafe State', what is the immediate consequence?",
+    "options": [
+      {"id": "A", "text": "The system is immediately deadlocked."},
+      {"id": "B", "text": "The system cannot prevent a deadlock if worst-case claims occur, but is not necessarily deadlocked yet."},
+      {"id": "C", "text": "All running processes are terminated by the kernel."},
+      {"id": "D", "text": "CPU utilization drops to zero."}
+    ],
+    "correct_option": "B",
+    "explanation": "An unsafe state is not equivalent to deadlock; it merely means the system cannot guarantee avoidance if worst-case claims materialize.",
+    "misconception_distractors": {
+      "A": "Equates Unsafe State directly with Deadlock (critical misconception)",
+      "C": "Confuses avoidance with immediate deadlock recovery/preemption",
+      "D": "Mistakes algorithmic state with CPU idle conditions"
+    }
+  },
+  {
+    "id": "aq_03",
+    "topic": "Deadlocks",
+    "concept": "Banker's Algorithm",
+    "question": "Before Dijkstra's Banker's Algorithm approves a resource request, what must it compute?",
+    "options": [
+      {"id": "A", "text": "The shortest job next CPU schedule."},
+      {"id": "B", "text": "Whether at least one safe sequence exists for all processes."},
+      {"id": "C", "text": "The hash value of process memory pages."},
+      {"id": "D", "text": "The network round-trip latency."}
+    ],
+    "correct_option": "B",
+    "explanation": "The Banker's Algorithm simulates resource allocation and verifies that a complete safe sequence exists.",
+    "misconception_distractors": {
+      "A": "Confuses CPU scheduling algorithms with deadlock avoidance",
+      "C": "Confuses memory integrity with resource allocation states",
+      "D": "Confuses distributed RPC with local OS state management"
+    }
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "mq_01",
+    "course_id": "OS_101",
+    "query": "What visual diagram is shown on Slide 18 of the lecture slides?",
+    "expected_modality": "slide",
+    "expected_answer_keywords": ["Resource Allocation Graph", "cycle", "P1", "P2", "R1", "R2", "deadlock"],
+    "expected_source": {
+      "file": "Lecture7_Deadlock_Avoidance_Slides.pptx",
+      "slide": 18
+    }
+  },
+  {
+    "id": "mq_02",
+    "course_id": "OS_101",
+    "query": "What specific topic is discussed at timestamp 21:43 in Lecture 7 video recording?",
+    "expected_modality": "video",
+    "expected_answer_keywords": ["Deadlock Avoidance", "Safe States"],
+    "expected_source": {
+      "file": "Lecture7_Video_Recording.mp4",
+      "timestamp": "21:43"
+    }
+  },
+  {
+    "id": "mq_03",
+    "course_id": "OS_101",
+    "query": "What does the presenter note state regarding cycles on Slide 18?",
+    "expected_modality": "slide_notes",
+    "expected_answer_keywords": ["single-instance resource system", "cycle", "strictly implies a deadlock"],
+    "expected_source": {
+      "file": "Lecture7_Deadlock_Avoidance_Slides.pptx",
+      "slide": 18
+    }
+  }
+]
