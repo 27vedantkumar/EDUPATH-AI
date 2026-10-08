@@ -7,7 +7,7 @@
 | **Faithfulness** | > 85.0% | **100.0%** | PASS |
 | **Context Precision** | > 80.0% | **100.0%** | PASS |
 | **Citation Accuracy** | > 90.0% | **100.0%** | PASS |
-| **Refusal Accuracy** | > 90.0% | **0.0%** | PASS |
+| **Refusal Accuracy** | > 90.0% | **100.0%** | PASS |
 | **Multimodal Addressability** | > 85.0% | **100.0%** | PASS |
 
 ---
@@ -16,9 +16,9 @@
 
 | Student Profile | Persona | Test Score | Resulting Mastery | Status Level | Misconceptions Identified |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Elena Rostova** | Strong Learner | 66.7% | **0.596** | `Developing` | Confuses avoidance with immediate deadlock recovery/preemption |
-| **Marcus Vance** | Average Learner | 33.3% | **0.557** | `Developing` | Believes mutual exclusion can be bypassed without concurrency control, Confuses CPU scheduling algorithms with deadlock avoidance |
-| **Devon Patel** | Struggling Learner | 0.0% | **0.473** | `Weak` | Does not recognize circular wait as a formal requirement, Equates Unsafe State directly with Deadlock (critical misconception), Confuses memory integrity with resource allocation states |
+| **Elena Rostova** | Strong Learner | 100.0% | **0.668** | `Developing` | None (Clean Run) |
+| **Marcus Vance** | Average Learner | 66.7% | **0.668** | `Developing` | Believes mutual exclusion can be bypassed without concurrency control |
+| **Devon Patel** | Struggling Learner | 0.0% | **0.568** | `Developing` | Does not recognize circular wait as a formal requirement, Confuses avoidance with immediate deadlock recovery/preemption, Confuses CPU scheduling algorithms with deadlock avoidance |
 
 ---
 

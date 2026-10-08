@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict, Any, List
 
 logger = logging.getLogger("edupath.ai.grounding_gate")
@@ -38,6 +39,31 @@ class GroundingGate:
                 "refusal_message": "I couldn't find sufficient evidence for this question in your uploaded course material.",
                 "validated_citations": []
             }
+
+        # Check for adversarial or out-of-domain terms absent from evidence
+        query = retrieval_result.get("query", "")
+        if query:
+            clean_q = re.sub(r'[^\w\s]', ' ', query.lower())
+            stop_words = {
+                "what", "is", "the", "according", "to", "this", "textbook", "in", "of",
+                "give", "me", "a", "using", "that", "was", "how", "why", "can", "for",
+                "and", "does", "with", "from", "explain", "timestamp", "lecture", "cover",
+                "examples", "chapter", "shown", "slide", "video", "notes", "presenter",
+                "depict", "depicts", "tell", "describe", "discuss", "discussed", "show",
+                "which", "these", "about", "between"
+            }
+            content_words = [w for w in clean_q.split() if len(w) > 3 and w not in stop_words]
+            if content_words:
+                all_evidence = " ".join([r.get("content", "").lower() for r in results])
+                missing = [w for w in content_words if w not in all_evidence]
+                if (len(missing) / len(content_words) >= 0.45 and len(missing) >= 3) or (len(missing) / len(content_words) >= 0.60):
+                    return {
+                        "status": "UNSUPPORTED",
+                        "confidence": 0.0,
+                        "allowed": False if scope == "course" else True,
+                        "refusal_message": f"I couldn't find evidence in your uploaded course material regarding '{missing[0]}'.",
+                        "validated_citations": []
+                    }
 
         # Check if marginal evidence
         if confidence < cls.SUPPORTED_THRESHOLD:

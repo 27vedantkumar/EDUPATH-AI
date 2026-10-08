@@ -66,6 +66,16 @@ class CodeSandboxService:
                         raise SandboxSecurityViolation(f"Security Policy: Use of dangerous function '{node.func.id}()' is prohibited.")
 
     @classmethod
+    def pre_audit_code(cls, code: str) -> Dict[str, Any]:
+        try:
+            cls.audit_python_ast(code)
+            return {"safe": True, "error": None}
+        except SandboxSecurityViolation as e:
+            return {"safe": False, "error": str(e)}
+        except Exception as e:
+            return {"safe": False, "error": str(e)}
+
+    @classmethod
     def execute_code(
         cls,
         code: str,
@@ -204,3 +214,4 @@ class CodeSandboxService:
                 pass
 
 code_sandbox = CodeSandboxService()
+ASTSandbox = CodeSandboxService

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: edupath-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=EduPath AI
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite+aiosqlite:///./edupath_multimodal.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./vector_store:/app/vector_store
+      - ./edupath_multimodal.db:/app/edupath_multimodal.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: edupath-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

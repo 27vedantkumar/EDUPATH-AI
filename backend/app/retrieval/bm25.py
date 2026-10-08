@@ -96,8 +96,14 @@ class BM25Retriever:
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:top_k]
 
-    @staticmethod
-    def _tokenize(text: str) -> List[str]:
-        # Strip punctuation and keep alphanumeric words
+    STOP_WORDS = {
+        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+        "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
+        "to", "was", "were", "will", "with", "this", "or"
+    }
+
+    @classmethod
+    def _tokenize(cls, text: str) -> List[str]:
+        # Strip punctuation and keep alphanumeric words excluding common stop words
         clean = re.sub(r'[^\w\s]', ' ', text.lower())
-        return [w for w in clean.split() if len(w) > 1]
+        return [w for w in clean.split() if len(w) > 1 and w not in cls.STOP_WORDS]
