@@ -94,7 +94,7 @@ export const KnowledgeGraphPage = ({ onAskConcept, onPracticeConcept }) => {
           {graphData && (
             <svg
               className="w-full h-full min-h-[460px]"
-              viewBox="0 0 800 480"
+              viewBox={`0 0 800 ${Math.max(480, ...(graphData.nodes || []).map((n) => (n.y || 300) + 80))}`}
               preserveAspectRatio="xMidYMid meet"
             >
               <defs>
@@ -288,7 +288,7 @@ export const KnowledgeGraphPage = ({ onAskConcept, onPracticeConcept }) => {
           {/* Action Buttons */}
           <div className="space-y-2 pt-2 border-t border-slate-800">
             <button
-              onClick={() => onAskConcept && onAskConcept(selectedNode.name)}
+              onClick={() => onAskConcept && onAskConcept(selectedNode)}
               className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all"
             >
               <Sparkles className="w-3.5 h-3.5" />
