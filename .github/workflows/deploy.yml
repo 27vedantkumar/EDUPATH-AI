@@ -8,18 +8,13 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
+  group: "pages-deploy"
   cancel-in-progress: false
 
 jobs:
   build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -41,23 +36,13 @@ jobs:
         run: |
           npm run build
           cp dist/index.html dist/404.html
+          touch dist/.nojekyll
 
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'frontend/dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Deploy to gh-pages Branch (Dual Redundancy)
+      - name: Publish Production Bundle to gh-pages Branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/dist
           user_name: 'Maanas Pandey'
           user_email: 'krishnamanas1224@gmail.com'
+          commit_message: 'deploy(pages): automated production build from main'
