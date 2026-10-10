@@ -18,28 +18,80 @@ import { GamesPage } from './pages/GamesPage';
 const AppContent = () => {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [tutorContext, setTutorContext] = useState(null);
+  const [sourceContext, setSourceContext] = useState(null);
+
+  const handleNavigateWithContext = (tab, ctx = {}) => {
+    if (tab === 'tutor') {
+      setTutorContext(ctx);
+    } else if (tab === 'sources') {
+      setSourceContext(ctx);
+    }
+    setCurrentTab(tab);
+  };
 
   const renderActivePage = () => {
     switch (currentTab) {
       case 'dashboard':
         return <DashboardPage onNavigate={setCurrentTab} />;
       case 'tutor':
-        return <GroundedTutorPage onNavigateToSource={() => setCurrentTab('sources')} />;
+        return (
+          <GroundedTutorPage
+            onNavigateToSource={(citation) => {
+              setSourceContext({ document: citation?.document });
+              setCurrentTab('sources');
+            }}
+            onNavigateTab={setCurrentTab}
+            onOpenUpload={() => setIsUploadOpen(true)}
+            initialContext={tutorContext}
+            onClearContext={() => setTutorContext(null)}
+            refreshTrigger={refreshTrigger}
+          />
+        );
       case 'graph':
         return (
           <KnowledgeGraphPage
-            onAskConcept={(concept) => setCurrentTab('tutor')}
-            onPracticeConcept={(concept) => setCurrentTab('assessment')}
+            key={`graph-${refreshTrigger}`}
+            onAskConcept={(concept) => {
+              setTutorContext({
+                initialQuery: `Explain the concept "${concept?.name || 'Safe State'}" and how it connects to its prerequisites in the Knowledge Graph.`
+              });
+              setCurrentTab('tutor');
+            }}
+            onPracticeConcept={() => setCurrentTab('assessment')}
           />
         );
       case 'sources':
-        return <SourceExplorerPage onAskAboutSource={() => setCurrentTab('tutor')} />;
+        return (
+          <SourceExplorerPage
+            onAskAboutSource={(ctx) => {
+              setTutorContext(ctx);
+              setCurrentTab('tutor');
+            }}
+            onOpenUpload={() => setIsUploadOpen(true)}
+            initialSourceContext={sourceContext}
+            refreshTrigger={refreshTrigger}
+          />
+        );
       case 'assessment':
-        return <AssessmentsPage onAskTutorAboutMistake={() => setCurrentTab('tutor')} />;
+        return (
+          <AssessmentsPage
+            key={`assess-${refreshTrigger}`}
+            onAskTutorAboutMistake={(question) => {
+              setTutorContext({
+                initialQuery: question?.question
+                  ? `Why was I wrong on this question: "${question.question}"? Explain the misconception and correct principle.`
+                  : "Explain the difference between an Unsafe State and a Deadlock so I don't confuse them."
+              });
+              setCurrentTab('tutor');
+            }}
+          />
+        );
       case 'planner':
         return <PlannerPage onNavigateToTopic={() => setCurrentTab('sources')} />;
       case 'flashcards':
-        return <FlashcardsPage />;
+        return <FlashcardsPage key={`fc-${refreshTrigger}`} />;
       case 'exams':
         return <ExamPage />;
       case 'coding':
@@ -54,10 +106,10 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar onOpenUpload={() => setIsUploadOpen(true)} />
-      
+
       <div className="flex-1 flex overflow-hidden">
         <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
-        
+
         <main className="flex-1 overflow-y-auto">
           {renderActivePage()}
         </main>
@@ -67,8 +119,9 @@ const AppContent = () => {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         onUploadComplete={() => {
-          // Re-render or refresh data
+          setRefreshTrigger((prev) => prev + 1);
         }}
+        onNavigateWithContext={handleNavigateWithContext}
       />
     </div>
   );

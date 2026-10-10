@@ -4,27 +4,30 @@ import {
   FileText,
   Presentation,
   Video,
-  ExternalLink,
   Sparkles,
-  Clock,
-  ChevronRight,
   BookOpen,
-  Image as ImageIcon,
-  Play
+  Play,
+  Upload
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-export const SourceExplorerPage = ({ onAskAboutSource }) => {
+export const SourceExplorerPage = ({
+  onAskAboutSource,
+  onOpenUpload,
+  initialSourceContext,
+  refreshTrigger
+}) => {
   const { currentCourse } = useAuth();
   const [sourcesData, setSourcesData] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [playingBanner, setPlayingBanner] = useState(null);
 
   useEffect(() => {
     loadSources();
-  }, [currentCourse]);
+  }, [currentCourse, refreshTrigger, initialSourceContext]);
 
   const loadSources = async () => {
     if (!currentCourse) return;
@@ -33,9 +36,19 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
       const data = await api.getSourceExplorer(currentCourse.id);
       setSourcesData(data);
       if (data && data.documents && data.documents.length > 0) {
-        setSelectedDoc(data.documents[0]);
-        if (data.documents[0].units && data.documents[0].units.length > 0) {
-          setSelectedUnit(data.documents[0].units[0]);
+        let targetDoc = data.documents[0];
+        if (initialSourceContext?.selectedDocId) {
+          const found = data.documents.find((d) => d.id === initialSourceContext.selectedDocId);
+          if (found) targetDoc = found;
+        } else if (initialSourceContext?.document) {
+          const found = data.documents.find((d) =>
+            d.filename.toLowerCase().includes(initialSourceContext.document.toLowerCase())
+          );
+          if (found) targetDoc = found;
+        }
+        setSelectedDoc(targetDoc);
+        if (targetDoc.units && targetDoc.units.length > 0) {
+          setSelectedUnit(targetDoc.units[0]);
         }
       }
     } catch (err) {
@@ -62,11 +75,22 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
     <div className="flex h-[calc(100vh-4rem)] max-w-7xl mx-auto p-6 gap-6 animate-in fade-in">
       {/* Left Tree Navigator */}
       <div className="w-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col shrink-0">
-        <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-800">
-          <FolderTree className="w-4 h-4 text-indigo-400" />
-          <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-            Source Addressable Repository
-          </h2>
+        <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <FolderTree className="w-4 h-4 text-indigo-400" />
+            <h2 className="text-xs font-bold text-white uppercase tracking-wider">
+              Source Addressable KB
+            </h2>
+          </div>
+          {onOpenUpload && (
+            <button
+              onClick={onOpenUpload}
+              className="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold flex items-center gap-1"
+            >
+              <Upload className="w-3 h-3" />
+              <span>Ingest</span>
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-3 pr-1">
@@ -74,7 +98,6 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
             const isDocSelected = selectedDoc?.id === doc.id;
             return (
               <div key={doc.id} className="space-y-1">
-                {/* Document Item Header */}
                 <button
                   onClick={() => {
                     setSelectedDoc(doc);
@@ -92,12 +115,11 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
                     {getDocIcon(doc.file_type)}
                     <span className="truncate">{doc.filename}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono">
+                  <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-1">
                     {doc.units?.length || 0} units
                   </span>
                 </button>
 
-                {/* Sub-items (Pages, Slides, or Video Timestamps) */}
                 {isDocSelected && doc.units && (
                   <div className="pl-4 space-y-1 border-l border-slate-800 ml-2">
                     {doc.units.map((unit) => {
@@ -105,7 +127,10 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
                       return (
                         <button
                           key={unit.id}
-                          onClick={() => setSelectedUnit(unit)}
+                          onClick={() => {
+                            setSelectedUnit(unit);
+                            setPlayingBanner(null);
+                          }}
                           className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-[11px] transition-all ${
                             isUnitSelected
                               ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
@@ -114,7 +139,7 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
                         >
                           <span className="truncate">{unit.location_label}</span>
                           {unit.source?.timestamp_formatted && (
-                            <span className="text-[10px] font-mono text-rose-400 flex items-center gap-0.5">
+                            <span className="text-[10px] font-mono text-rose-400 flex items-center gap-0.5 shrink-0">
                               <Play className="w-2.5 h-2.5" />
                               {unit.source.timestamp_formatted}
                             </span>
@@ -134,7 +159,6 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
       <div className="flex-1 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between overflow-y-auto">
         {selectedUnit ? (
           <div className="space-y-6">
-            {/* Header with Badges */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -151,7 +175,13 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
               </div>
 
               <button
-                onClick={() => onAskAboutSource && onAskAboutSource(selectedUnit)}
+                onClick={() =>
+                  onAskAboutSource &&
+                  onAskAboutSource({
+                    scopedDocument: selectedDoc?.filename,
+                    initialQuery: `Explain "${selectedUnit.location_label}" from ${selectedDoc?.filename} in detail and highlight its key takeaways.`
+                  })
+                }
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -161,26 +191,37 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
 
             {/* Video Timestamp Player Banner if video segment */}
             {selectedUnit.source?.timestamp_start !== undefined && (
-              <div className="p-4 rounded-xl bg-slate-950/80 border border-rose-500/30 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
-                    <Play className="w-5 h-5 fill-rose-400" />
+              <div className="p-4 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                      <Play className="w-5 h-5 fill-rose-400" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white block">
+                        Video Timestamp Target: {selectedUnit.source.timestamp_formatted || '21:43'}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        Exact seek offset: {selectedUnit.source.timestamp_start}s • Indexed Speech-to-Text Segment
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-white block">
-                      Video Timestamp Target: {selectedUnit.source.timestamp_formatted || '21:43'}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      Exact seek offset: {selectedUnit.source.timestamp_start}s • Lecture recording indexed
-                    </span>
-                  </div>
+                  <button
+                    onClick={() =>
+                      setPlayingBanner(
+                        `Playing ${selectedDoc?.filename} seeked directly to ${selectedUnit.source.timestamp_formatted || '21:43'} (${selectedUnit.source.timestamp_start}s)`
+                      )
+                    }
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-sm"
+                  >
+                    Play at Timestamp
+                  </button>
                 </div>
-                <button
-                  onClick={() => alert(`Seeking Lecture Player to ${selectedUnit.source.timestamp_formatted || '21:43'}`)}
-                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-sm"
-                >
-                  Play at Timestamp
-                </button>
+                {playingBanner && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-mono">
+                    ▶ {playingBanner}
+                  </div>
+                )}
               </div>
             )}
 
@@ -192,7 +233,8 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
                   <span>Slide {selectedUnit.source.slide} Metadata & Visual Diagram</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed font-mono">
-                  Visual Diagram: Depicts Resource Allocation Graph demonstrating active deadlock conditions with processes and resources in a circular wait state.
+                  {selectedUnit.source.figure ||
+                    'Visual Diagram: Depicts Resource Allocation Graph demonstrating active deadlock conditions with processes and resources in a circular wait state.'}
                 </p>
               </div>
             )}
@@ -211,10 +253,10 @@ export const SourceExplorerPage = ({ onAskAboutSource }) => {
             <div className="flex flex-wrap gap-2 pt-2">
               <span className="text-xs text-slate-400 py-1">Linked Taxonomy:</span>
               <span className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
-                Topic: Deadlocks
+                Topic: {selectedUnit.topic || selectedDoc?.topic || 'Deadlocks'}
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium">
-                Concept: Safe State & Banker's Algorithm
+                Concept: {selectedUnit.concept || selectedDoc?.concepts?.[0] || "Safe State & Banker's Algorithm"}
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 text-xs font-mono">
                 Unit ID: {selectedUnit.id}
