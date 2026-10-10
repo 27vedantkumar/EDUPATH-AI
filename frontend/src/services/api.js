@@ -65,7 +65,12 @@ export const api = {
     return resilientFetch(`${API_BASE}/courses`, {}, () => [COURSE_KNOWLEDGE_STORE.course]);
   },
 
-  async uploadMaterial(courseId, file) {
+  async uploadMaterial(courseId, file, customPayload = null) {
+    // Always run client ingestion pipeline so local state & artifacts are enriched immediately
+    const clientResult = await ClientIntelligenceEngine.ingestMaterial(courseId, file, customPayload);
+    if (!file) {
+      return clientResult;
+    }
     return resilientFetch(`${API_BASE}/courses/upload`, {
       method: 'POST',
       body: (() => {
@@ -74,33 +79,31 @@ export const api = {
         formData.append('file', file);
         return formData;
       })()
-    }, () => {
-      // Dynamically add to client knowledge store
-      const newDoc = {
-        id: `doc_${Date.now()}`,
-        filename: file.name,
-        file_type: file.name.split('.').pop() || 'pdf',
-        units: [
-          {
-            id: `unit_${Date.now()}`,
-            location_label: `${file.name} • Section 1`,
-            content: `Ingested content for ${file.name}. Fully indexed and groundable across course concepts.`,
-            source: { file: file.name, page: 1 }
-          }
-        ]
-      };
-      COURSE_KNOWLEDGE_STORE.documents.push(newDoc);
-      return { status: 'SUCCESS', document: newDoc };
-    });
+    }, () => clientResult).then((res) => ({
+      ...clientResult,
+      ...(res || {}),
+      pipeline_summary: clientResult.pipeline_summary,
+      document: clientResult.document
+    }));
   },
 
   // Tutor
   async askTutor(message, mode = 'beginner', courseId = 'OS_101', scopeLocation = null, language = 'en') {
+    const clientAns = ClientIntelligenceEngine.askTutor(message, mode, scopeLocation);
     return resilientFetch(`${API_BASE}/tutor/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, mode, course_id: courseId, scope_location: scopeLocation, language })
-    }, () => ClientIntelligenceEngine.askTutor(message, mode, scopeLocation));
+    }, () => clientAns).then((res) => ({
+      ...clientAns,
+      ...(res || {}),
+      // Ensure mode-formatted synthesis and pipeline_trace are always populated
+      answer: (res && res.answer && res.pipeline_trace) ? res.answer : clientAns.answer,
+      citations: (res && res.citations && res.citations.length > 0) ? res.citations : clientAns.citations,
+      pipeline_trace: (res && res.pipeline_trace) ? res.pipeline_trace : clientAns.pipeline_trace,
+      follow_up_questions: clientAns.follow_up_questions,
+      recommended_next_action: clientAns.recommended_next_action
+    }));
   },
 
   async askSourceQuestion(query, documentName, locationLabel, excerpt) {
@@ -113,13 +116,15 @@ export const api = {
 
   // Knowledge Graph & Source Explorer
   async getKnowledgeGraph(courseId) {
-    return resilientFetch(`${API_BASE}/knowledge/graph/${courseId}`, {}, () => COURSE_KNOWLEDGE_STORE.graph);
+    return resilientFetch(`${API_BASE}/knowledge/graph/${courseId}`, {}, () =>
+      ClientIntelligenceEngine.getUnifiedKnowledgeGraph(courseId)
+    );
   },
 
   async getSourceExplorer(courseId) {
     return resilientFetch(`${API_BASE}/knowledge/sources/${courseId}`, {}, () => ({
       course_id: courseId,
-      documents: COURSE_KNOWLEDGE_STORE.documents
+      documents: ClientIntelligenceEngine.getAllDocuments()
     }));
   },
 
@@ -193,71 +198,11 @@ export const api = {
   },
 
   async getPracticeQuestions(courseId, topicName) {
-    return resilientFetch(`${API_BASE}/assessment/practice/${courseId}?topic=${encodeURIComponent(topicName || '')}`, {}, () => [
-      {
-        id: "q_01",
-        topic: "Deadlocks",
-        concept: "Coffman Conditions",
-        question: "Which of the following conditions is NOT required for a deadlock to occur?",
-        options: [
-          { id: "A", text: "Mutual Exclusion" },
-          { id: "B", text: "Preemption of Allocated Resources" },
-          { id: "C", text: "Hold and Wait" },
-          { id: "D", text: "Circular Wait" }
-        ],
-        correct_option: "B",
-        explanation: "The Coffman conditions require No Preemption. Preempting resources breaks deadlock.",
-        misconception: "Confuses preemption with deadlock recovery.",
-        citation: {
-          source_type: "pdf",
-          document: "Operating_Systems_Ch7_Deadlocks.pdf",
-          location_label: "Page 42, Section 7.2",
-          excerpt: "Resources cannot be preempted; that is, a resource can be released only voluntarily by the holding process."
-        }
-      },
-      {
-        id: "q_02",
-        topic: "Deadlocks",
-        concept: "Safe State",
-        question: "If a system enters an 'Unsafe State', which statement is technically accurate?",
-        options: [
-          { id: "A", text: "The system is already in a deadlock." },
-          { id: "B", text: "The system cannot guarantee avoidance if worst-case claims occur, but is not deadlocked yet." },
-          { id: "C", text: "All running processes are terminated by the kernel." },
-          { id: "D", text: "Available resources exceed total demand." }
-        ],
-        correct_option: "B",
-        explanation: "An unsafe state is not equivalent to deadlock; it merely means the system cannot guarantee avoidance if worst-case claims materialize.",
-        misconception: "Equates Unsafe State directly with Deadlock.",
-        citation: {
-          source_type: "pptx",
-          document: "Lecture7_Deadlock_Avoidance_Slides.pptx",
-          location_label: "Slide 18: Resource Graphs",
-          excerpt: "An unsafe state is not equivalent to a deadlock. However, from an unsafe state, the system cannot prevent deadlock if maximum demands are made."
-        }
-      },
-      {
-        id: "q_03",
-        topic: "Deadlocks",
-        concept: "Banker's Algorithm",
-        question: "Before Dijkstra's Banker's Algorithm grants a resource request, what must be validated?",
-        options: [
-          { id: "A", text: "Round-Robin quantum expiration" },
-          { id: "B", text: "Existence of at least one Safe Sequence for all active processes" },
-          { id: "C", text: "Page table hash consistency" },
-          { id: "D", text: "Direct cache hit ratio exceeding 90%" }
-        ],
-        correct_option: "B",
-        explanation: "Banker's Algorithm simulates tentative allocation and tests whether a complete safe sequence remains.",
-        misconception: "Confuses CPU scheduling or paging with resource avoidance.",
-        citation: {
-          source_type: "video",
-          document: "Lecture7_Video_Recording.mp4",
-          location_label: "Timestamp 22:17 - 23:05",
-          excerpt: "Notice how Dijkstra evaluates Allocation, Max, and Available matrices to guarantee a safe sequence before approving the request."
-        }
-      }
-    ]);
+    return resilientFetch(
+      `${API_BASE}/assessment/practice/${courseId}?topic=${encodeURIComponent(topicName || '')}`,
+      {},
+      () => ClientIntelligenceEngine.getPracticeQuestionsForCourse()
+    );
   },
 
   async evaluateAssessment(payload) {
@@ -270,47 +215,11 @@ export const api = {
 
   // Flashcards (SuperMemo SM-2)
   async getFlashcards(courseId) {
-    return resilientFetch(`${API_BASE}/flashcards/due/${courseId}`, {}, () => [
-      {
-        id: 'fc_01',
-        topic: 'Deadlocks',
-        concept: 'Coffman Conditions',
-        front_prompt: 'What four conditions must hold simultaneously for a deadlock to occur according to Coffman?',
-        back_answer: '1. Mutual Exclusion (non-shareable mode)\n2. Hold and Wait (holding resources while waiting)\n3. No Preemption (released only voluntarily)\n4. Circular Wait (closed cycle of waiting processes)',
-        citation: {
-          source_type: 'pdf',
-          document: 'Operating_Systems_Ch7_Deadlocks.pdf',
-          location_label: 'Page 42 • Section 7.2',
-          excerpt: 'Four conditions must hold simultaneously in a system for a deadlock to arise (Coffman et al., 1971).'
-        }
-      },
-      {
-        id: 'fc_02',
-        topic: 'Deadlocks',
-        concept: "Banker's Algorithm",
-        front_prompt: "What is the core purpose of Dijkstra's Banker's Algorithm in an operating system?",
-        back_answer: "To dynamically verify whether granting a resource request will leave the operating system in a guaranteed Safe State where at least one safe sequence exists.",
-        citation: {
-          source_type: 'pptx',
-          document: 'Lecture7_Deadlock_Avoidance_Slides.pptx',
-          location_label: 'Slide 18 • Deadlock Avoidance',
-          excerpt: 'Dijkstra Banker algorithm simulates resource allocation to confirm a safe sequence exists before approving allocation.'
-        }
-      },
-      {
-        id: 'fc_03',
-        topic: 'Deadlocks',
-        concept: 'Safe State',
-        front_prompt: 'Is an "Unsafe State" in an operating system identical to a Deadlock?',
-        back_answer: 'No! An unsafe state is not necessarily deadlocked; it is a state from which the OS cannot prevent processes from deadlocking if worst-case maximum claims materialize.',
-        citation: {
-          source_type: 'video',
-          document: 'Lecture7_Video_Recording.mp4',
-          location_label: 'Timestamp 21:43 - 22:17',
-          excerpt: 'An unsafe state is not equivalent to deadlock. However, from an unsafe state, the system cannot prevent deadlock if maximum demands are made.'
-        }
-      }
-    ]);
+    return resilientFetch(
+      `${API_BASE}/flashcards/due/${courseId}`,
+      {},
+      () => ClientIntelligenceEngine.getFlashcardsForCourse()
+    );
   },
 
   async reviewFlashcard(flashcardId, rating) {
