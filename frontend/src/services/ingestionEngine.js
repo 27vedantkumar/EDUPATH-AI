@@ -7,7 +7,7 @@
  * Embeddings & BM25 Index → Knowledge Graph & Study Artifacts
  */
 
-import { ContentSanitizer } from './contentSanitizer';
+import { ContentSanitizer } from './contentSanitizer.js';
 
 const STORAGE_KEY_DOCS = 'edupath_ingested_documents_v1';
 const STORAGE_KEY_GRAPH_NODES = 'edupath_ingested_graph_nodes_v1';
@@ -364,24 +364,40 @@ export class MultimodalIngestionEngine {
    */
   static async extractRawTextFromFile(file) {
     if (!file) return '';
-    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const ext = (file.name || '').split('.').pop()?.toLowerCase() || '';
     const isPlainText = ['txt', 'md', 'csv', 'json', 'py', 'js', 'ts', 'html', 'xml', 'c', 'cpp', 'java'].includes(ext);
 
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const raw = String(e.target?.result || '');
-        if (isPlainText) {
-          resolve(ContentSanitizer.sanitizeText(raw));
-          return;
+    const sanitizeRaw = (rawStr) => {
+      const raw = String(rawStr || '');
+      if (isPlainText) {
+        return ContentSanitizer.sanitizeText(raw);
+      }
+      // For binary files (PDF/DOCX/PPTX), extract ONLY validated human-readable prose
+      const cleanProse = ContentSanitizer.extractCleanEducationalProse(raw);
+      return cleanProse.length >= 90 ? cleanProse : '';
+    };
+
+    try {
+      if (typeof file.text === 'function') {
+        const raw = await file.text();
+        return sanitizeRaw(raw);
+      }
+    } catch (_) {}
+
+    if (typeof FileReader !== 'undefined') {
+      return new Promise((resolve) => {
+        try {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(sanitizeRaw(e.target?.result || ''));
+          reader.onerror = () => resolve('');
+          reader.readAsText(file);
+        } catch (_) {
+          resolve('');
         }
-        // For binary files (PDF/DOCX/PPTX), extract ONLY validated human-readable prose
-        const cleanProse = ContentSanitizer.extractCleanEducationalProse(raw);
-        resolve(cleanProse.length >= 90 ? cleanProse : '');
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsText(file);
-    });
+      });
+    }
+
+    return '';
   }
 
   static buildFallbackEducationalChunks(cleanBaseName, topic, concepts) {

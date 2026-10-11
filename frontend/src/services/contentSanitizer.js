@@ -60,16 +60,19 @@ export class ContentSanitizer {
   }
 
   /**
-   * Sanitizes a single line or paragraph of text, removing all PDF/parser artifacts
-   * while preserving legitimate educational numbers (e.g., "3 phases", "Process 1", "CPU Burst = 5 ms").
+   * Sanitizes a string, line, or multi-paragraph lesson, removing all PDF/parser artifacts
+   * while preserving legitimate educational numbers, single-word headings (**Example**),
+   * and technical labels ("Page 11", "3 phases", "Round Robin", "CPU Burst = 5 ms").
    */
   static sanitizeText(rawText = '') {
-    if (!rawText || typeof rawText !== 'string') return '';
+    if (rawText === null || rawText === undefined) return '';
+    const str = String(rawText);
+    if (!str.trim()) return '';
 
-    let cleaned = rawText;
+    let cleaned = str;
 
-    // 1. Remove HTML tags if any leaked
-    cleaned = cleaned.replace(/<\/?[a-z][^>]*>/gi, ' ');
+    // 1. Remove HTML tags if any leaked (while preserving <P1, P2, P0> safe sequences)
+    cleaned = cleaned.replace(/<\/?(?:div|span|p|br|hr|script|style|html|body|head|meta|link|table|tr|td|th)\b[^>]*>/gi, ' ');
 
     // 2. Remove all PDF dictionary keys, object refs (31 0 R, 40 R 50 R), ReportLab metadata, timestamps
     for (const pattern of PDF_METADATA_PATTERNS) {
@@ -90,21 +93,36 @@ export class ContentSanitizer {
       cleaned = cleaned.replace(filler, '');
     }
 
-    // 7. Normalize whitespace while preserving paragraph breaks
-    cleaned = cleaned
-      .split('\n')
-      .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-      .filter((line) => {
-        if (!line) return false;
-        // Reject lines that are mostly symbols, isolated numbers/letters, or PDF operators (BT, ET, Tf, Td, Tm)
-        if (/^(?:BT|ET|Tf|Td|Tm|TJ|Tj|cm|rg|RG|re|f|S|Q|q|W|n|\d+|\W+)$/.test(line)) return false;
-        // Count real alphabetic words of 3+ letters
-        const realWords = line.match(/\b[A-Za-z]{3,}\b/g) || [];
-        return realWords.length >= 2;
-      })
-      .join('\n\n');
+    // 7. Normalize lines while preserving headings (**Example**), formulas, and single-line labels
+    const lines = cleaned.split('\n');
+    const keptLines = [];
 
-    return cleaned.trim();
+    for (const rawLine of lines) {
+      const line = rawLine.replace(/[ \t]+/g, ' ').trim();
+      if (!line) {
+        if (keptLines.length > 0 && keptLines[keptLines.length - 1] !== '') {
+          keptLines.push('');
+        }
+        continue;
+      }
+      // Reject pure PDF stream operators
+      if (/^(?:BT|ET|Tf|Td|Tm|TJ|Tj|cm|rg|RG|re|f|S|Q|q|W|n)$/.test(line)) {
+        continue;
+      }
+      // Keep any line that has at least one letter or digit (including **Example**, Page 2, [5, 4, 3], O(1))
+      if (/[A-Za-z0-9]/.test(line)) {
+        keptLines.push(line);
+      }
+    }
+
+    return keptLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  /**
+   * Alias for sanitizeText used across UI components and engines
+   */
+  static cleanText(rawText = '') {
+    return this.sanitizeText(rawText);
   }
 
   /**
@@ -114,12 +132,10 @@ export class ContentSanitizer {
   static extractCleanEducationalProse(rawBinaryString = '') {
     if (!rawBinaryString || typeof rawBinaryString !== 'string') return '';
 
-    // Split into candidate lines/blocks first
     const candidateBlocks = rawBinaryString.match(/[A-Za-z0-9][A-Za-z0-9\s.,;:?!()\-'"+=]{40,400}/g) || [];
     const validSentences = [];
 
     for (const block of candidateBlocks) {
-      // Immediately discard any block that contains PDF dictionary or stream markers
       if (this.containsExtractionArtifacts(block)) continue;
       if (
         /\b(?:xml|font|obj|endobj|stream|endstream|xref|FlateDecode|schemas|openxmlformats|Content_Types|Producer|Creator|Catalog|PageMode|UseNone|MediaBox|Resources|ProcSet|WinAnsiEncoding|Subtype|FontDescriptor)\b/i.test(
@@ -132,7 +148,6 @@ export class ContentSanitizer {
       const sanitized = this.sanitizeText(block);
       if (!sanitized || sanitized.length < 45) continue;
 
-      // Verify natural language word density (must contain common English stop/connecting words)
       const hasNaturalGrammar = /\b(?:the|and|for|that|with|from|this|are|is|was|were|can|will|into|between|when|where|which|how|why|process|system|design|user|data|time|phase|stage|model|method|question|answer)\b/i.test(
         sanitized
       );
@@ -143,22 +158,30 @@ export class ContentSanitizer {
       }
     }
 
-    // Deduplicate identical sentences
     const unique = [...new Set(validSentences)].slice(0, 15);
     return unique.join('\n\n');
   }
 
   /**
    * Formats a clean, human-readable document title from a filename
-   * e.g., "Design_Thinking_Mixed_152_MCQs.pdf" -> "Design Thinking Mixed 152 MCQs"
+   * e.g., "Design_Thinking_Mixed_108_MCQs_3Units.pdf" -> "Design Thinking Mixed 108 MCQs 3Units"
    */
   static formatCleanSourceName(filename = '') {
     if (!filename) return 'Course Study Material';
-    return String(filename)
-      .replace(/\.[^/.]+$/, '')
-      .replace(/[_-]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const cleaned = this.sanitizeText(
+      String(filename)
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+    );
+    return cleaned || 'Course Study Material';
+  }
+
+  /**
+   * Alias for formatCleanSourceName used across engines and UI components
+   */
+  static cleanDocumentTitle(filename = '') {
+    return this.formatCleanSourceName(filename);
   }
 
   /**
@@ -166,12 +189,14 @@ export class ContentSanitizer {
    * GOOD: "Source: Design Thinking Mixed 152 MCQs" or "Source: Design Thinking Mixed 152 MCQs — Page 11"
    */
   static formatSourceReference(filename = '', locationLabel = '') {
-    const cleanDoc = this.formatCleanSourceName(filename);
-    if (!locationLabel) return `Source: ${cleanDoc}`;
+    const rawStr = `${filename || ''} ${locationLabel || ''}`;
+    const cleanDoc = this.formatCleanSourceName(
+      String(filename || 'Course Study Material').split(/→|—/)[0].trim()
+    );
+    const locSource = locationLabel || (String(filename).includes('—') ? String(filename).split('—')[1] : '') || rawStr;
 
-    // Extract only clean Page / Slide / Timestamp if present
-    const pageMatch = String(locationLabel).match(/\b(?:Page|Slide)\s+\d+\b/i);
-    const timeMatch = String(locationLabel).match(/\b\d{1,2}:\d{2}\b/);
+    const pageMatch = String(locSource).match(/\b(?:Page|Slide)\s+\d+\b/i);
+    const timeMatch = String(locSource).match(/\b\d{1,2}:\d{2}\b/);
 
     if (pageMatch) {
       return `Source: ${cleanDoc} — ${pageMatch[0]}`;
