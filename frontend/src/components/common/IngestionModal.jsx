@@ -53,6 +53,14 @@ const QUICK_SAMPLE_PACKS = [
     badge: 'MP4 Video',
     desc: 'Timestamped lecture covering Critical Section invariants, Dijkstra wait(P)/signal(V) semaphores, and Priority Inheritance.',
     text: `Concurrent access to shared data causes Race Conditions. Any valid Critical Section solution must satisfy three invariants: (1) Mutual Exclusion (at most one thread inside CS), (2) Progress (threads outside CS cannot block selection), and (3) Bounded Waiting (strict upper bound on waiting turns).\n\nA semaphore S is an integer variable accessed only through two indivisible atomic operations: wait(S) decrements S and blocks if S < 0, while signal(S) increments S and wakes a blocked process. Priority Inversion is solved via Priority Inheritance Protocol.`
+  },
+  {
+    id: 'sample_stocksense',
+    title: 'StockSense_Double_Entry_Inventory_FSM.pdf',
+    modality: 'pdf',
+    badge: 'Enterprise PDF',
+    desc: 'Double-Entry Stock Ledger, centralized Finite State Machine (DRAFT → READY → DONE), deterministic lock ordering, and NUMERIC precision.',
+    text: `StockSense enforces a centralized Finite State Machine (FSM) for all warehouse receipts, deliveries, transfers, and adjustments: allowed transitions are DRAFT -> READY -> DONE or CANCELED. Terminal states (DONE and CANCELED) are strictly immutable; a canceled operation can never transition back to ready or be validated.\n\nTo eliminate database deadlocks during concurrent multi-item deliveries, StockSense sorts all operation line items deterministically by product_id ASC before acquiring PostgreSQL SELECT ... FOR UPDATE row locks.\n\nEvery stock movement writes an append-only Double-Entry Stock Ledger record storing stock_before, delta_quantity, and stock_after using exact NUMERIC(18,4) decimal arithmetic and Idempotency-Key deduplication.`
   }
 ];
 
@@ -256,12 +264,49 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
               </div>
             </div>
 
+            {/* AI-Decided 3-Phase Adaptive Curriculum & Grand Quiz Preview */}
+            {ingestionResult?.learning_session && (
+              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-950/60 via-slate-950/80 to-purple-950/50 border border-indigo-500/35 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    AI-Decided 3-Phase Adaptive Curriculum & Grand Quiz Synthesized
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold">
+                    3 Phases (15 MCQs) + 15-MCQ Grand Quiz Ready
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {ingestionResult.learning_session.aiBoundaryRationale}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {(ingestionResult.learning_session.phases || []).map((ph) => (
+                    <div
+                      key={ph.id}
+                      className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-bold">
+                        <span className="text-indigo-400">PHASE {ph.phaseNumber}</span>
+                        <span className="text-slate-400">{ph.difficulty}</span>
+                      </div>
+                      <div className="text-[11px] font-semibold text-white truncate">
+                        {ph.title.replace(/^Phase \d+:\s*/, '')}
+                      </div>
+                      <div className="text-[10px] text-emerald-400 font-mono">
+                        ⚡ Brief & 📖 Deep + {ph.mcqs?.length || 5} MCQs
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Source-Addressable Units Preview */}
             <div className="space-y-2">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
                 Source-Addressable Knowledge Units ({doc.units?.length || 0}):
               </span>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 {(doc.units || []).map((unit) => (
                   <div
                     key={unit.id}
@@ -291,6 +336,23 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                     if (onNavigateWithContext) {
                       onNavigateWithContext('tutor', {
                         scopedDocument: doc.filename,
+                        openAdaptiveStudio: true,
+                        customTopic: doc.topic
+                      });
+                    }
+                    onClose();
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md transition-all"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>🎓 Teach Me This (3-Phase + Grand Quiz)</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (onNavigateWithContext) {
+                      onNavigateWithContext('tutor', {
+                        scopedDocument: doc.filename,
                         initialQuery: `Explain the core concepts and formulas from my newly ingested material "${doc.filename}" (${doc.topic}).`
                       });
                     }
@@ -299,7 +361,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                   className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Ask AI Tutor About This Material</span>
+                  <span>Ask AI Tutor About This</span>
                 </button>
 
                 <button
@@ -312,7 +374,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                   className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
                 >
                   <FolderTree className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Inspect in Source Explorer</span>
+                  <span>Source Explorer</span>
                 </button>
 
                 <button
@@ -325,7 +387,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                   className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
                 >
                   <Network className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>View in Knowledge Graph</span>
+                  <span>Knowledge Graph</span>
                 </button>
               </div>
 

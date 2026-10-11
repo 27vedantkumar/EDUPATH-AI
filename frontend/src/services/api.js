@@ -1,4 +1,6 @@
 import { COURSE_KNOWLEDGE_STORE, ClientIntelligenceEngine } from './clientEngine';
+import { AIOrchestrator } from './aiOrchestrator';
+import { AdaptivePhaseEngine } from './adaptivePhaseEngine';
 
 const API_BASE = '/api';
 
@@ -68,8 +70,18 @@ export const api = {
   async uploadMaterial(courseId, file, customPayload = null) {
     // Always run client ingestion pipeline so local state & artifacts are enriched immediately
     const clientResult = await ClientIntelligenceEngine.ingestMaterial(courseId, file, customPayload);
+    // Immediately synthesize AI-decided 3-Phase Adaptive Curriculum + Grand Quiz for the ingested document
+    const learningSession = AdaptivePhaseEngine.regenerateSession({
+      documentName: clientResult?.document?.filename || '',
+      customTopic: clientResult?.document?.topic || ''
+    });
+    const enrichedResult = {
+      ...clientResult,
+      learning_session: learningSession
+    };
+
     if (!file) {
-      return clientResult;
+      return enrichedResult;
     }
     return resilientFetch(`${API_BASE}/courses/upload`, {
       method: 'POST',
@@ -79,30 +91,57 @@ export const api = {
         formData.append('file', file);
         return formData;
       })()
-    }, () => clientResult).then((res) => ({
-      ...clientResult,
+    }, () => enrichedResult).then((res) => ({
+      ...enrichedResult,
       ...(res || {}),
-      pipeline_summary: clientResult.pipeline_summary,
-      document: clientResult.document
+      pipeline_summary: enrichedResult.pipeline_summary,
+      document: enrichedResult.document,
+      learning_session: enrichedResult.learning_session
     }));
   },
 
-  // Tutor
-  async askTutor(message, mode = 'beginner', courseId = 'OS_101', scopeLocation = null, language = 'en') {
-    const clientAns = ClientIntelligenceEngine.askTutor(message, mode, scopeLocation);
+  // Tutor (General-Purpose LLM + Contextual RAG + Dual Brief/Explanation Mode)
+  async askTutor(
+    message,
+    mode = 'beginner',
+    courseId = 'OS_101',
+    scopeLocation = null,
+    responseDepth = 'explanation',
+    language = 'en'
+  ) {
+    const scopedDoc = scopeLocation?.document || '';
+    const orchestrated = AIOrchestrator.orchestrateResponse({
+      query: message,
+      responseDepth,
+      pedagogicalMode: mode,
+      scopedDocument: scopedDoc
+    });
+
     return resilientFetch(`${API_BASE}/tutor/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, mode, course_id: courseId, scope_location: scopeLocation, language })
-    }, () => clientAns).then((res) => ({
-      ...clientAns,
+      body: JSON.stringify({
+        message,
+        mode,
+        response_depth: responseDepth,
+        course_id: courseId,
+        scope_location: scopeLocation,
+        language
+      })
+    }, () => orchestrated).then((res) => ({
+      ...orchestrated,
       ...(res || {}),
-      // Ensure mode-formatted synthesis and pipeline_trace are always populated
-      answer: (res && res.answer && res.pipeline_trace) ? res.answer : clientAns.answer,
-      citations: (res && res.citations && res.citations.length > 0) ? res.citations : clientAns.citations,
-      pipeline_trace: (res && res.pipeline_trace) ? res.pipeline_trace : clientAns.pipeline_trace,
-      follow_up_questions: clientAns.follow_up_questions,
-      recommended_next_action: clientAns.recommended_next_action
+      answer: orchestrated.answer,
+      brief_content: orchestrated.brief_content,
+      explanation_content: orchestrated.explanation_content,
+      intent: orchestrated.intent,
+      source_origin: orchestrated.source_origin,
+      grounding_status: orchestrated.grounding_status,
+      anatomy_trace: orchestrated.anatomy_trace,
+      citations: (res && res.citations && res.citations.length > 0) ? res.citations : orchestrated.citations,
+      pipeline_trace: orchestrated.pipeline_trace,
+      follow_up_questions: orchestrated.follow_up_questions,
+      recommended_next_action: orchestrated.recommended_next_action
     }));
   },
 
@@ -111,7 +150,12 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, document_name: documentName, location_label: locationLabel, excerpt })
-    }, () => ClientIntelligenceEngine.askTutor(query, 'beginner', { document: documentName }));
+    }, () => AIOrchestrator.orchestrateResponse({
+      query,
+      responseDepth: 'explanation',
+      pedagogicalMode: 'beginner',
+      scopedDocument: documentName
+    }));
   },
 
   // Knowledge Graph & Source Explorer
