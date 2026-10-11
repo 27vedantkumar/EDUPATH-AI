@@ -353,6 +353,23 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                     if (onNavigateWithContext) {
                       onNavigateWithContext('tutor', {
                         scopedDocument: doc.filename,
+                        openSmartMentor: true,
+                        customTopic: doc.topic
+                      });
+                    }
+                    onClose();
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>🧠 Smart Exam Mentor & Podcast</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (onNavigateWithContext) {
+                      onNavigateWithContext('tutor', {
+                        scopedDocument: doc.filename,
                         initialQuery: `Explain the core concepts and formulas from my newly ingested material "${doc.filename}" (${doc.topic}).`
                       });
                     }
@@ -442,7 +459,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                   type="file"
                   id="file-upload"
                   onChange={handleFileChange}
-                  accept=".pdf,.pptx,.ppt,.docx,.txt,.md,.csv,.mp4,.png,.jpg"
+                  accept=".pdf,.pptx,.ppt,.docx,.txt,.md,.csv,.mp4,.mp3,.wav,.png,.jpg"
                   className="hidden"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
@@ -450,10 +467,10 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                     <FileText className="w-6 h-6" />
                   </div>
                   <span className="text-sm font-semibold text-slate-200">
-                    {file ? file.name : 'Choose a file from your computer'}
+                    {file ? file.name : 'Choose an Article/PDF, Video, Audio, or Slide Deck'}
                   </span>
                   <span className="text-xs text-slate-500 mt-1">
-                    Supports PDF, PPTX, DOCX, TXT/MD, Images, and MP4 Video Recordings
+                    Supports Article/PDF, PPTX, DOCX, MP4 Video, MP3/WAV Audio (Gemini TTS Transcription), and Images
                   </span>
                 </label>
               </div>
@@ -483,9 +500,10 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                       onChange={(e) => setCustomModality(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-indigo-500"
                     >
-                      <option value="pdf">PDF Textbook</option>
+                      <option value="pdf">Article / PDF Textbook</option>
                       <option value="pptx">PPTX Slide Deck</option>
                       <option value="video_mp4">MP4 Video Transcript</option>
+                      <option value="audio_mp3">Audio / Podcast Transcript</option>
                       <option value="docx">DOCX Study Notes</option>
                     </select>
                   </div>
