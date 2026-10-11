@@ -2179,4 +2179,123 @@ Synthesizing all three phases prepares you for comprehensive mastery assessments
     this.saveSession(session);
     return { session, report };
   }
+
+  /**
+   * Unlimited Phase Quizzes (Section 14 & TEST 6):
+   * Generates a fresh 5-question MCQ quiz for any Phase (1, 2, or 3) when the user requests "Give me another quiz"
+   */
+  static generateAdditionalPhaseQuiz(sessionId, phaseNumber = 1) {
+    const all = this.getAllSessions();
+    const session = (sessionId && all.find((s) => s.id === sessionId)) || this.getActiveSession();
+    if (!session) return null;
+
+    const pIdx = Math.max(0, Math.min(2, Number(phaseNumber) - 1));
+    const phase = session.phases[pIdx];
+    if (!phase) return session;
+
+    const nextSetNum = (phase.quizSetNumber || 1) + 1;
+    phase.quizSetNumber = nextSetNum;
+
+    const existingQuestions = Array.isArray(phase.quiz) ? phase.quiz : [];
+    const phaseConcepts = Array.isArray(phase.conceptsCovered) && phase.conceptsCovered.length > 0
+      ? phase.conceptsCovered
+      : ['Core Principles', 'Operational Flow', 'Edge Cases'];
+
+    const stemsByPhase = {
+      1: [
+        (c) => `[Set #${nextSetNum}] Which foundational rule must be verified first when applying ${c}?`,
+        (c) => `[Set #${nextSetNum}] Why is ${c} essential for establishing baseline correctness in ${session.title}?`,
+        (c) => `[Set #${nextSetNum}] What distinguishes a valid precondition in ${c} from an invalid assumption?`,
+        (c) => `[Set #${nextSetNum}] When introducing ${c} to a new system, which invariant holds at initialization?`,
+        (c) => `[Set #${nextSetNum}] Which statement accurately defines the foundational role of ${c}?`
+      ],
+      2: [
+        (c) => `[Set #${nextSetNum}] In an active workflow, how does ${c} interact with downstream state transitions?`,
+        (c) => `[Set #${nextSetNum}] Suppose two operations execute ${c} concurrently. What guarantees deterministic behavior?`,
+        (c) => `[Set #${nextSetNum}] When tracing ${c} step by step, what occurs immediately after input validation succeeds?`,
+        (c) => `[Set #${nextSetNum}] Which operational mechanism prevents state inconsistency during ${c}?`,
+        (c) => `[Set #${nextSetNum}] How does ${c} transform intermediate inputs into verified outputs?`
+      ],
+      3: [
+        (c) => `[Set #${nextSetNum}] Under worst-case load, which edge-case trade-off governs ${c}?`,
+        (c) => `[Set #${nextSetNum}] How do you diagnose and remediate a subtle bottleneck in ${c} without breaking invariants?`,
+        (c) => `[Set #${nextSetNum}] Which architectural optimization improves ${c} while preserving strict safety guarantees?`,
+        (c) => `[Set #${nextSetNum}] Why do naive implementations of ${c} fail under boundary stress tests?`,
+        (c) => `[Set #${nextSetNum}] When auditing ${c} in production, which verification check confirms end-to-end mastery?`
+      ]
+    };
+
+    const stems = stemsByPhase[pIdx + 1] || stemsByPhase[1];
+
+    phase.quiz = existingQuestions.map((origQ, idx) => {
+      const conceptName = ContentSanitizer.cleanText(
+        origQ.concept || phaseConcepts[idx % phaseConcepts.length] || session.title
+      );
+      const origCorrectOpt = (origQ.options || []).find(
+        (o) => o.id === (origQ.correctAnswer || origQ.correctOption)
+      );
+      const correctText = ContentSanitizer.cleanText(
+        origCorrectOpt?.text ||
+          `Enforcing verified invariants and deterministic rules for ${conceptName}`
+      );
+
+      // Rotate which option letter holds the correct answer so every generated quiz feels fresh
+      const letters = ['A', 'B', 'C', 'D'];
+      const targetCorrectIdx = (idx + nextSetNum) % 4;
+      const targetCorrectLetter = letters[targetCorrectIdx];
+
+      const distractors = (origQ.options || [])
+        .filter((o) => o.id !== (origQ.correctAnswer || origQ.correctOption))
+        .map((o) => ContentSanitizer.cleanText(o.text));
+
+      while (distractors.length < 3) {
+        distractors.push(`Bypassing precondition checks during ${conceptName}`);
+      }
+
+      let dPtr = 0;
+      const newOptions = letters.map((letter, lIdx) => {
+        if (lIdx === targetCorrectIdx) {
+          return { id: letter, text: correctText };
+        }
+        const text = distractors[dPtr++] || `Skipping validation for ${conceptName}`;
+        return { id: letter, text };
+      });
+
+      return {
+        id: `p${pIdx + 1}_s${nextSetNum}_q${idx + 1}`,
+        phaseNumber: pIdx + 1,
+        concept: conceptName,
+        difficulty: origQ.difficulty || phase.difficulty || 'Intermediate',
+        question: stems[idx % stems.length](conceptName),
+        options: newOptions,
+        correctAnswer: targetCorrectLetter,
+        correctOption: targetCorrectLetter,
+        explanation: ContentSanitizer.cleanText(
+          origQ.explanation ||
+            `${correctText} directly satisfies the governing invariants of ${conceptName}.`
+        )
+      };
+    });
+
+    this.saveSession(session);
+    return session;
+  }
+
+  /**
+   * Unlimited Grand Quiz Retakes (Section 15 & TEST 9):
+   * Allows retaking the 15-MCQ Grand Quiz unlimited times.
+   */
+  static resetGrandQuizForRetake(sessionId) {
+    const all = this.getAllSessions();
+    const session = (sessionId && all.find((s) => s.id === sessionId)) || this.getActiveSession();
+    if (!session) return null;
+
+    session.grandQuiz.unlocked = true;
+    session.grandQuiz.completed = false;
+    session.grandQuiz.result = null;
+    session.grandQuiz.retakeCount = (session.grandQuiz.retakeCount || 0) + 1;
+    this.saveSession(session);
+    return session;
+  }
 }
+

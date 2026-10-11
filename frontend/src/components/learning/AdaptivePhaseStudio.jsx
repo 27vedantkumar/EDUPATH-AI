@@ -77,7 +77,24 @@ export const AdaptivePhaseStudio = ({
     setQuizAnswers({});
   };
 
+  const handleGenerateAnotherPhaseQuiz = (phaseNum) => {
+    const updated = AdaptivePhaseEngine.generateAdditionalPhaseQuiz(session.id, phaseNum);
+    if (updated) {
+      setSession({ ...updated });
+    }
+    setActiveTab(`phase_${phaseNum}`);
+    setViewMode('quiz');
+    setCurrentQIndex(0);
+    setSelectedOption(null);
+    setIsSubmitted(false);
+    setQuizAnswers({});
+  };
+
   const startGrandQuiz = () => {
+    const updated = AdaptivePhaseEngine.resetGrandQuizForRetake(session.id);
+    if (updated) {
+      setSession({ ...updated });
+    }
     setActiveTab('grand_quiz');
     setViewMode('grand_quiz');
     setCurrentQIndex(0);
@@ -452,7 +469,7 @@ export const AdaptivePhaseStudio = ({
               ))}
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
               {activePhase.performance && (
                 <button
                   onClick={() => setViewMode('phase_result')}
@@ -461,6 +478,14 @@ export const AdaptivePhaseStudio = ({
                   View Last Score ({activePhase.performance.accuracy}%)
                 </button>
               )}
+              <button
+                onClick={() => handleGenerateAnotherPhaseQuiz(activePhase.number)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-semibold border border-indigo-500/30 flex items-center gap-1.5"
+                title="Generate a fresh set of 5 MCQs for this phase"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Give Me Another Quiz</span>
+              </button>
               <button
                 onClick={() => startPhaseQuiz(activePhase.number)}
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg flex items-center gap-2 transition-all"
@@ -574,10 +599,13 @@ export const AdaptivePhaseStudio = ({
               </p>
               {selectedOption !== currentQuestion.correctAnswer &&
                 currentQuestion.remediationNote && (
-                  <p className="text-amber-300 leading-relaxed pt-1 border-t border-rose-500/20">
-                    <strong>You may want to revisit this concept:</strong>{' '}
-                    {ContentSanitizer.cleanText(currentQuestion.remediationNote)}
-                  </p>
+                  <div className="text-amber-300 leading-relaxed pt-2 border-t border-rose-500/20 space-y-1">
+                    <div className="font-bold text-amber-300">Concept needs review</div>
+                    <div className="italic text-indigo-300">
+                      {ContentSanitizer.cleanText(currentQuestion.concept)}
+                    </div>
+                    <p>{ContentSanitizer.cleanText(currentQuestion.remediationNote)}</p>
+                  </div>
                 )}
             </div>
           )}
@@ -611,7 +639,7 @@ export const AdaptivePhaseStudio = ({
         </div>
       )}
 
-      {/* VIEW 3: PHASE EVALUATION SUMMARY + TARGETED REMEDIATION (Section 17) */}
+      {/* VIEW 3: PHASE EVALUATION SUMMARY + TARGETED REMEDIATION (Section 16) */}
       {viewMode === 'phase_result' && activePhase?.performance && (
         <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
@@ -651,13 +679,13 @@ export const AdaptivePhaseStudio = ({
 
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2">
               <span className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4" /> You May Want to Revisit This Concept
+                <AlertCircle className="w-4 h-4" /> Concept needs review
               </span>
               {activePhase.performance.weakConcepts.length > 0 ? (
                 <ul className="space-y-2 text-sm text-slate-200">
                   {activePhase.performance.weakConcepts.map((c, i) => (
                     <li key={i} className="flex items-center justify-between gap-2">
-                      <span>• {ContentSanitizer.cleanText(c)}</span>
+                      <span className="italic text-indigo-300">{ContentSanitizer.cleanText(c)}</span>
                       {handleAskTutor && (
                         <button
                           onClick={() => handleAskTutor(c)}
@@ -677,12 +705,12 @@ export const AdaptivePhaseStudio = ({
             </div>
           </div>
 
-          {/* Targeted Concept Remediation Notes (Section 17) */}
+          {/* Targeted Concept Remediation Notes (Section 16) */}
           {activePhase.performance.remediationItems &&
             activePhase.performance.remediationItems.length > 0 && (
               <div className="p-4 rounded-xl bg-slate-900/90 border border-amber-500/30 space-y-3">
                 <div className="text-sm font-bold text-amber-300">
-                  Targeted Concept Review Before Moving Forward
+                  Concept needs review
                 </div>
                 <div className="space-y-2.5">
                   {activePhase.performance.remediationItems.map((item, idx) => (
@@ -690,7 +718,7 @@ export const AdaptivePhaseStudio = ({
                       key={idx}
                       className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-sm space-y-1"
                     >
-                      <div className="font-semibold text-white">
+                      <div className="italic text-indigo-300 font-semibold">
                         {ContentSanitizer.cleanText(item.concept)}
                       </div>
                       <p className="text-slate-300 leading-relaxed">
@@ -711,6 +739,13 @@ export const AdaptivePhaseStudio = ({
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Retry Phase {activePhase.number} Quiz</span>
+              </button>
+              <button
+                onClick={() => handleGenerateAnotherPhaseQuiz(activePhase.number)}
+                className="px-4 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Give Me Another Phase {activePhase.number} Quiz</span>
               </button>
               <button
                 onClick={() => {
