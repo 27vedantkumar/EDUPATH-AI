@@ -31,8 +31,10 @@ import { useAuth } from '../context/AuthContext';
 import { SourceCitation } from '../components/citations/SourceCitation';
 import { AdaptivePhaseStudio } from '../components/learning/AdaptivePhaseStudio';
 import { SmartExamMentorStudio } from '../components/learning/SmartExamMentorStudio';
+import { EducationalContentRenderer } from '../components/common/EducationalContentRenderer';
 import { INTENT_CLASSES } from '../services/aiOrchestrator';
 import { SmartExamEngine } from '../services/smartExamEngine';
+import { ContentSanitizer } from '../services/contentSanitizer';
 
 export const GroundedTutorPage = ({
   onNavigateToSource,
@@ -44,7 +46,7 @@ export const GroundedTutorPage = ({
 }) => {
   const { currentCourse } = useAuth();
   const [availableDocs, setAvailableDocs] = useState([]);
-  const [expandedTraces, setExpandedTraces] = useState({ welcome: true });
+  const [expandedTraces, setExpandedTraces] = useState({});
   const [responseDepth, setResponseDepth] = useState('explanation'); // 'brief' | 'explanation'
   const [messageDepthOverrides, setMessageDepthOverrides] = useState({});
   const [copiedId, setCopiedId] = useState(null);
@@ -53,9 +55,32 @@ export const GroundedTutorPage = ({
   const [activeStudioView, setActiveStudioView] = useState('chat');
   const [studioTopic, setStudioTopic] = useState('');
 
-  const welcomeBrief = `### ⚡ Brief Mode — Unified General-Purpose LLM + Grounded RAG + 3-Phase Adaptive + Smart Exam Mentor\n• **Ask Anything (General AI + Outside Knowledge)**: Ask *"When was the Eiffel Tower built?"*, *"What is binary search?"*, *"Explain Design Thinking"*, or *"Explain Enterprise Inventory FSM"*.\n• **Ask Uploaded Material (5-Stage & 7-Step RAG)**: Grounded in your PDFs, PPTX slides, MP4 lecture videos, and audio transcripts.\n• **🎓 3-Phase Adaptive Learning & Grand Quiz**: Learn across **Phase 1 → Phase 2 → Phase 3** (5 MCQs each) + **15-MCQ Grand Quiz**.\n• **🧠 Smart Exam Mentor & Bayesian Active Learning**: Practice **MCQs**, **Fill in the Blanks**, **True/False**, **FAQs**, **🧒 ELI12**, and **🎙️ AI Study Podcasts** with live Bayesian $P(\\theta \\mid D)$ updating!`;
+  const welcomeBrief = `**Adaptive AI Learning Companion**
+Ask any general question, explore your uploaded course materials, or enter the 3-Phase Adaptive Learning Studio to master topics step by step.
 
-  const welcomeExplanation = `Hello! I am your **Unified General-Purpose AI Tutor, RAG Enhanced Chatbot, 3-Phase Adaptive Learning Engine & Smart Exam Mentor**.\n\n### 🚀 Complete Architecture Capabilities:\n1. **How LLM Works (Live Tokenization → LLM Processing → Response)**: Every query you type is split into subword tokens (click **Query Anatomy & RAG Trace** below to inspect the colored token chunks!).\n2. **RAG Enhanced Chatbot (5-Stage Pipeline & 7-Step Flow)**: Combines **Vector Store + Okapi BM25 Related Data** with **LLM & Outside Knowledge** so both uploaded course questions and general questions (*"When was the Eiffel Tower built?"*, *"What is binary search?"*) work seamlessly.\n3. **⚡ Brief vs. 📖 Explanation Mode + 🧒 ELI12**: Switch any answer between concise high-signal points, deep explanations, or *"Explain Like I'm 12"*.\n4. **🎓 3-Phase Adaptive Studio & Grand Quiz**: AI partitions material into **Phase 1, Phase 2, Phase 3** (5 MCQs each) + **15-MCQ Grand Quiz**.\n5. **🧠 Smart Exam Mentor & Bayesian Active Learning**: Includes **MCQ, Fill in the Blanks, True/False, Exam FAQs, AI Audio Podcast (TTS), Similar Content Recommendations**, and **Bayesian $P(\\theta \\mid D)$ + Flagged Question Active Learning**!`;
+*Brief Mode vs. Deep Explanation*
+Toggle between *Brief* (concise concept overview and key example) and *Deep Explanation* (comprehensive theory, step-by-step walkthrough, and common misconceptions) at any time.
+
+**Key Idea**
+Upload any textbook PDF, slide deck, or lecture notes, or select a document from the Scope menu above and click *3-Phase & Grand Quiz* to learn through Phase 1 (Foundation), Phase 2 (Application), Phase 3 (Mastery), and the 15-MCQ Grand Quiz.`;
+
+  const welcomeExplanation = `**Adaptive AI Learning Companion**
+Welcome to your unified learning workspace. You can ask general academic or engineering questions, query your uploaded study materials with source-grounded accuracy, or launch a structured 3-Phase Adaptive Learning session.
+
+*Source-Grounded RAG & General Knowledge*
+When you ask about your uploaded PDFs, slides, or notes, responses are grounded directly in your course material. When you ask general questions—such as *What is binary search?* or *Explain Design Thinking*—the tutor synthesizes a clear, structured lesson.
+
+**Core Concept**
+Every topic can be studied in two synchronized depths: *Brief Mode* for rapid revision and *Deep Explanation Mode* for thorough conceptual mastery with worked examples.
+
+**How It Works**
+Select any ingested document from the Scope dropdown and open *3-Phase & Grand Quiz* to study the material across three progressive phases:
+• *Phase 1 (Foundation)*: Core definitions, prerequisites, and baseline intuition followed by a 5-question MCQ check.
+• *Phase 2 (Application)*: Operational workflows, analytical mechanisms, and cause-and-effect relationships followed by 5 MCQs.
+• *Phase 3 (Mastery)*: Advanced edge cases, design trade-offs, and synthesis followed by 5 MCQs and the 15-question cross-phase Grand Quiz.
+
+**Example**
+Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must hold for a deadlock?"* below, or click any quick prompt to begin.`;
 
   const initialTokenization = SmartExamEngine.tokenizeQuery('When was the Eiffel Tower built?');
   const initialRagDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
@@ -64,7 +89,7 @@ export const GroundedTutorPage = ({
     chunksScanned: 8,
     bm25Score: 4.8,
     vectorScore: 0.98,
-    sourceOrigin: 'Answer Combined with LLM & Outside Knowledge'
+    sourceOrigin: 'Source-Grounded & General AI Synthesis'
   });
 
   const [messages, setMessages] = useState([
@@ -75,14 +100,14 @@ export const GroundedTutorPage = ({
       brief_content: welcomeBrief,
       explanation_content: welcomeExplanation,
       intent: 'SYSTEM_READY',
-      source_origin: 'Answer Combined with LLM & Outside Knowledge',
+      source_origin: 'Source-Grounded & General AI Synthesis',
       tokenization: initialTokenization,
       rag_diagrams: initialRagDiagrams,
       citations: [
         {
           source_type: 'pdf',
-          document: 'Operating_Systems_Ch7_Deadlocks.pdf',
-          location_label: 'Page 42 • Section 7.2 Deadlock Characterization',
+          document: 'Operating Systems Ch7 Deadlocks',
+          location_label: 'Page 42',
           excerpt:
             'Four Coffman conditions must hold simultaneously for a deadlock to arise: Mutual Exclusion, Hold and Wait, No Preemption, and Circular Wait.',
           relevance: 0.99
@@ -741,9 +766,13 @@ export const GroundedTutorPage = ({
                     )}
 
                     {/* Message Body */}
-                    <div className="whitespace-pre-wrap font-sans text-xs leading-relaxed">
-                      {displayedContent}
-                    </div>
+                    {isUser ? (
+                      <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                        {displayedContent}
+                      </div>
+                    ) : (
+                      <EducationalContentRenderer content={displayedContent} />
+                    )}
 
                     {/* Citations List */}
                     {!isUser && msg.citations && msg.citations.length > 0 && (

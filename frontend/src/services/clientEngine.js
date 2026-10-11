@@ -8,6 +8,7 @@
  */
 
 import { MultimodalIngestionEngine } from './ingestionEngine';
+import { ContentSanitizer } from './contentSanitizer';
 
 export const COURSE_KNOWLEDGE_STORE = {
   course: {
@@ -525,53 +526,69 @@ export class ClientIntelligenceEngine {
     }
 
     // Dynamic synthesis for ANY user-ingested document or general course unit
-    const secSnippet = secondary ? `\n• **Cross-Referenced Evidence (${secondary.doc.filename} • ${secondary.unit.location_label})**: ${secondary.unit.content.slice(0, 180)}` : '';
+    const cleanDocTitle = ContentSanitizer.cleanDocumentTitle(doc.filename);
+    const cleanUnitContent = ContentSanitizer.cleanText(unit.content);
+    const cleanConcept = ContentSanitizer.cleanText(unit.concept || doc.concepts?.[0] || cleanDocTitle);
+    const cleanTopic = ContentSanitizer.cleanText(unit.topic || doc.topic || cleanDocTitle);
+    const cleanLoc = ContentSanitizer.cleanText(unit.location_label || 'Page 1');
+    const secSnippet = secondary
+      ? ` Cross-referenced with ${ContentSanitizer.cleanDocumentTitle(secondary.doc.filename)} (${ContentSanitizer.cleanText(secondary.unit.location_label)}): ${ContentSanitizer.cleanText(secondary.unit.content).slice(0, 180)}`
+      : '';
+
     return {
-      topic: unit.topic || doc.topic || 'Operating Systems & Concurrency',
-      concept: unit.concept || doc.concepts?.[0] || doc.filename,
-      prerequisites: unit.prerequisites || doc.prerequisites || ['Core Systems Architecture'],
-      headline: `Grounded directly in **${doc.filename}** (${unit.location_label}):`,
+      topic: cleanTopic,
+      concept: cleanConcept,
+      prerequisites: (unit.prerequisites || doc.prerequisites || ['Core Domain Principles']).map((p) =>
+        ContentSanitizer.cleanText(p)
+      ),
+      headline: `${cleanConcept} in ${cleanDocTitle} (${cleanLoc}):`,
       bulletPoints: [
-        `**Primary Source Evidence**: ${unit.content}`,
-        `**Core Concept (${unit.concept || 'System Principle'})**: Operates within the **${unit.topic || 'Course'}** module, connecting prerequisite foundations (${(unit.prerequisites || doc.prerequisites || ['System Invariants']).join(', ')}) to verifiable execution guarantees.${secSnippet}`
+        `${cleanUnitContent}`,
+        `Connects prerequisite foundations (${(unit.prerequisites || doc.prerequisites || ['Foundational Principles']).join(', ')}) to practical application across ${cleanTopic}.${secSnippet}`
       ],
-      formula: unit.content.includes('=') ? unit.content.split('\n').find(l => l.includes('=')) || 'Invariant: Verified against course specification' : 'System Invariant: Safety ∧ Liveness',
-      analogy: `Think of **${unit.concept || doc.filename}** like a coordinated air-traffic control protocol: every state transition is validated against capacity constraints before clearance is granted, ensuring both high throughput and zero collisions.`,
-      pitfall: `When applying **${unit.concept || 'this concept'}** in problem solving, always check boundary conditions and prerequisite assumptions (${(unit.prerequisites || ['resource bounds']).join(', ')}) rather than memorizing definitions in isolation.`,
-      hindiSummary: `यह अवधारणा (${unit.concept || doc.filename}) आपके कोर्स मटेरियल (${unit.location_label}) से सत्यापित है। इसका मुख्य उद्देश्य सिस्टम की सुरक्षा, दक्षता और सही क्रम (Invariants) को बनाए रखना है।`,
+      formula: cleanUnitContent.includes('=')
+        ? cleanUnitContent.split('\n').find((l) => l.includes('=')) || 'Core Invariant: Verified against course material'
+        : `Core Relationship: ${(unit.prerequisites || doc.prerequisites || ['Prerequisites']).join(' → ')} → ${cleanConcept}`,
+      analogy: `Think of ${cleanConcept} like a structured traffic control protocol: each step validates preconditions before advancing, ensuring clarity and zero conflicting states.`,
+      pitfall: `When applying ${cleanConcept} in assessments, always verify the foundational preconditions (${(unit.prerequisites || ['core assumptions']).join(', ')}) rather than relying on isolated memorization.`,
+      hindiSummary: `यह अवधारणा (${cleanConcept}) आपके कोर्स मटेरियल (${cleanLoc}) से सत्यापित है। इसका मुख्य उद्देश्य सिस्टम की सुरक्षा, दक्षता और सही क्रम को बनाए रखना है।`,
       followUps: [
-        `Give me an Exam Mode summary and pitfalls for ${unit.concept || doc.filename}`,
-        `Test my understanding of ${unit.concept || doc.filename} with Socratic questions`,
-        `How does ${unit.concept || doc.filename} connect to the Knowledge Graph?`
+        `Teach me ${cleanConcept} in 3 Adaptive Phases`,
+        `Give me an Exam Mode summary and pitfalls for ${cleanConcept}`,
+        `Test my understanding of ${cleanConcept} with Socratic questions`
       ]
     };
   }
 
   /**
-   * Formats the synthesized knowledge into the 6 distinct Tutoring Modes
+   * Formats the synthesized knowledge into the 6 distinct Tutoring Modes using clean educational typography
    */
-  static formatByPedagogicalMode(mode, query, syn, primary, secondary) {
-    const bullets = syn.bulletPoints.map(b => `• ${b}`).join('\n');
+  static formatByPedagogicalMode(mode, query, syn, primary) {
+    const cleanDocTitle = ContentSanitizer.cleanDocumentTitle(primary.doc.filename);
+    const cleanLoc = ContentSanitizer.cleanText(primary.unit.location_label);
+    const paragraphs = syn.bulletPoints
+      .map((b) => ContentSanitizer.cleanText(b).replace(/^\d+\.\s*/, ''))
+      .join('\n\n');
 
     switch (mode) {
       case 'exam':
-        return `### 🎯 Exam Mode: High-Yield Synthesis — ${syn.concept}\n${syn.headline}\n\n**Key Exam Points to Memorize:**\n${bullets}\n\n**📐 Core Formula / Formal Invariant:**\n\`${syn.formula}\`\n\n**⚠️ Common Exam Trap / Pitfall:**\n${syn.pitfall}\n\n**📝 Quick Exam Check:**\n*If an exam question asks you to justify why ${syn.concept} holds under worst-case contention, cite **${primary.doc.filename} (${primary.unit.location_label})** and verify the invariant above first.*`;
+        return `**${syn.concept} — Exam Synthesis**\n${ContentSanitizer.cleanText(syn.headline)}\n\n**Core Concept**\n${paragraphs}\n\n**Formula**\n${syn.formula}\n\n**Common Confusion**\n${ContentSanitizer.cleanText(syn.pitfall)}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
 
       case 'deep_dive':
-        return `### 🔬 Deep Dive Mode: Formal Systems & Theoretical Analysis — ${syn.concept}\n${syn.headline}\n\n**1. Formal Specification & Evidence:**\n${bullets}\n\n**2. Mathematical / Algorithmic Formulation:**\n\`${syn.formula}\`\n• **Prerequisites Required**: ${syn.prerequisites.join(' → ')} → **${syn.concept}**\n\n**3. Kernel Implementation & Boundary Conditions:**\nIn production operating system kernels, enforcing **${syn.concept}** requires balancing lock granularity and verification overhead against throughput. ${syn.pitfall}`;
+        return `**${syn.concept} — Deep Theoretical Analysis**\n${ContentSanitizer.cleanText(syn.headline)}\n\n*Prerequisites*\n${syn.prerequisites.join(' → ')} → ${syn.concept}\n\n**Core Concept**\n${paragraphs}\n\n**Formula**\n${syn.formula}\n\n**Why It Matters**\n${ContentSanitizer.cleanText(syn.pitfall)}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
 
       case 'socratic':
-        return `### 🧠 Socratic Mode: Guided Inquiry — ${syn.concept}\nInstead of handing you a rote answer, let's build your mental model from **${primary.doc.filename}** (${primary.unit.location_label}):\n\n**Grounded Clue from Your Material:**\n${syn.bulletPoints[0]}\n\n**🤔 Socratic Probing Questions (Think & Respond):**\n1. **Condition Check**: Based on the clue above, what would happen to the system state if one of the underlying assumptions in **${syn.concept}** were violated at runtime?\n2. **Edge-Case Reasoning**: Why is \`${syn.formula}\` a necessary guarantee rather than an optional optimization?\n\n*💡 **Hint**: ${syn.analogy}*`;
+        return `**${syn.concept} — Socratic Guided Inquiry**\nLet's build your mental model directly from ${cleanDocTitle} (${cleanLoc}).\n\n*Foundational Clue*\n${ContentSanitizer.cleanText(syn.bulletPoints[0])}\n\n**How It Works**\nConsider what happens to the system state if one of the underlying assumptions in ${syn.concept} is violated at runtime, and why the relationship ${syn.formula} is a necessary invariant.\n\n**Example**\n${ContentSanitizer.cleanText(syn.analogy)}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
 
       case 'interview':
-        return `### 💼 Technical Interview Mode: Systems Engineering — ${syn.concept}\n**Interviewer Prompt:** *"Walk me through ${syn.concept} and how you would design or debug it in a high-concurrency production service."*\n\n**✅ Strong Senior-Level Answer Structure (Grounded in ${primary.doc.filename}):**\n${bullets}\n\n**⚖️ Engineering Trade-offs & Complexity:**\n• **Formal Bound**: \`${syn.formula}\`\n• **Production Pitfall to Mention**: ${syn.pitfall}\n\n**🔥 Follow-Up Interviewer Probe:**\n*"How would your design change if resource contention spiked 10x across distributed nodes?"*`;
+        return `**${syn.concept} — Technical Interview Walkthrough**\n*Interviewer Prompt: Walk me through ${syn.concept} and how you would apply or debug it in a real-world system.*\n\n**Core Concept**\n${paragraphs}\n\n**Formula**\n${syn.formula}\n\n**Common Confusion**\n${ContentSanitizer.cleanText(syn.pitfall)}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
 
       case 'bilingual':
-        return `### 🌐 Bilingual Mode (English + हिंदी) — ${syn.concept}\n\n**🇬🇧 English Explanation (${primary.unit.location_label}):**\n${syn.headline}\n${bullets}\n\n**🇮🇳 हिंदी में स्पष्टीकरण (Hindi Explanation):**\n${syn.hindiSummary}\n• **मुख्य सूत्र (Key Formula)**: \`${syn.formula}\`\n• **उदाहरण (Analogy)**: ${syn.analogy}\n• **परीक्षा में ध्यान दें (Exam Tip)**: ${syn.pitfall}`;
+        return `**${syn.concept} — Bilingual Explanation (English + हिंदी)**\n${ContentSanitizer.cleanText(syn.headline)}\n\n**Core Concept**\n${paragraphs}\n\n**हिंदी में स्पष्टीकरण (Hindi Explanation)**\n${syn.hindiSummary}\n\n**Example**\n${ContentSanitizer.cleanText(syn.analogy)}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
 
       case 'beginner':
       default:
-        return `### 🌱 Beginner Mode: Step-by-Step Intuition — ${syn.concept}\n${syn.headline}\n\n**Core Breakdown:**\n${bullets}\n\n**💡 Real-World Analogy:**\n${syn.analogy}\n\n**🔑 Key Formula / Rule to Remember:**\n\`${syn.formula}\``;
+        return `**${syn.concept}**\n${ContentSanitizer.cleanText(syn.headline)}\n\n**Core Concept**\n${paragraphs}\n\n**Example**\n${ContentSanitizer.cleanText(syn.analogy)}\n\n**Formula**\n${syn.formula}\n\n**Common Confusion**\n${ContentSanitizer.cleanText(syn.pitfall)}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
     }
   }
 

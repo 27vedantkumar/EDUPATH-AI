@@ -4,12 +4,12 @@
  * Architecture:
  * User Input → Secure Ingress & Sanitization → Intent Router (16 classes) →
  * Context Manager (Conversation + Uploaded RAG Material + Knowledge Base + Tools) →
- * Dual Response Strategy Generator (⚡ BRIEF mode & 📖 EXPLANATION mode)
+ * Dual Response Strategy Generator (Brief mode & Deep Explanation mode)
  */
 
 import { ClientIntelligenceEngine } from './clientEngine';
-import { MultimodalIngestionEngine } from './ingestionEngine';
 import { SmartExamEngine } from './smartExamEngine';
+import { ContentSanitizer } from './contentSanitizer';
 
 export const INTENT_CLASSES = {
   GENERAL_QUESTION: 'GENERAL_QUESTION',
@@ -31,55 +31,224 @@ const GENERAL_KNOWLEDGE_TOPICS = [
     keywords: ['binary search', 'logarithmic search', 'bisection'],
     title: 'Binary Search Algorithm',
     domain: 'Algorithms & Data Structures',
-    formula: 'Time: O(log n) | Space: O(1) iterative, O(log n) recursive | mid = low + ⌊(high - low) / 2⌋',
-    brief: `**Binary Search** is an efficient $O(\\log n)$ divide-and-conquer search algorithm that finds a target value within a **sorted array** by repeatedly halving the search interval.\n\n• **Precondition**: The input array MUST be sorted.\n• **Mechanism**: Compare the target with the middle element (\`mid = low + Math.floor((high - low) / 2)\`). If equal, return \`mid\`; if smaller, search the left half; if larger, search the right half.\n• **Complexity**: Time $O(\\log_2 n)$, Auxiliary Space $O(1)$.`,
-    explanation: `### 📖 Deep Explanation: Binary Search Algorithm\n\n**1. Core Intuition & Why It Works**\nInstead of scanning every element linearly in $O(n)$ time, Binary Search exploits the **monotonic ordering** of a sorted array. Comparing the target $T$ against the midpoint element $A[\\text{mid}]$ immediately eliminates **50% of the remaining search space** on every comparison.\n\n**2. Overflow-Safe Midpoint Formula**\n\`mid = low + Math.floor((high - low) / 2)\`\n*(Using \`(low + high) / 2\` can cause 32-bit integer overflow when \`low + high > 2^31 - 1\`).*\n\n**3. Production Implementation (Python / JS)**\n\`\`\`python\ndef binary_search(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = low + (high - low) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1\n\`\`\`\n\n**4. Concrete Trace Example**\nGiven \`arr = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]\`, target = \`23\`:\n• **Step 1**: \`low=0, high=9 → mid=4\` (\`arr[4]=16 < 23\`) → move \`low = 5\`\n• **Step 2**: \`low=5, high=9 → mid=7\` (\`arr[7]=56 > 23\`) → move \`high = 6\`\n• **Step 3**: \`low=5, high=6 → mid=5\` (\`arr[5]=23 == 23\`) → **Found at index 5 in just 3 steps!**\n\n**5. Edge Cases & Variants**\n• Duplicate elements: Use \`lower_bound\` (first index $\\ge T$) or \`upper_bound\` (first index $> T$).\n• Rotated sorted arrays: Check which half (\`low..mid\` vs \`mid..high\`) is strictly sorted before narrowing bounds.`
+    formula: 'Time: O(log n) | Space: O(1) iterative | mid = low + Math.floor((high - low) / 2)',
+    brief: `**Binary Search Algorithm**
+Binary Search is an efficient $O(\\log n)$ divide-and-conquer search algorithm that locates a target value within a sorted array by repeatedly halving the search interval.
+
+*Sorted Order Precondition*
+The input array must be sorted in monotonic order before Binary Search can be applied.
+
+**Formula**
+mid = low + Math.floor((high - low) / 2)
+
+**Key Idea**
+Compare the target with the middle element. If equal, return its index; if the target is smaller, narrow the search to the left half; if larger, narrow to the right half.
+
+**Example**
+In sorted array [2, 5, 8, 12, 16, 23, 38], searching for 23 checks index 3 (12 < 23), then searches the right half [16, 23, 38] and finds 23 at index 5 in just two steps.`,
+    explanation: `**Binary Search Algorithm**
+Instead of scanning every element linearly in $O(n)$ time, Binary Search exploits the monotonic ordering of a sorted collection. Comparing the target against the midpoint immediately eliminates half of the remaining candidates on every comparison.
+
+*Overflow-Safe Midpoint*
+Computing the midpoint as mid = low + Math.floor((high - low) / 2) prevents 32-bit signed integer overflow when low + high exceeds $2^{31} - 1$.
+
+**Core Concept**
+At each iteration, the algorithm maintains an active search invariant [low, high] guaranteed to contain the target if it is present in the array.
+
+**How It Works**
+1. Initialize low = 0 and high = n - 1.
+2. While low <= high, compute mid = low + Math.floor((high - low) / 2).
+3. If arr[mid] == target, return mid.
+4. If arr[mid] < target, discard the left half by setting low = mid + 1; otherwise discard the right half by setting high = mid - 1.
+
+**Example**
+Given arr = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91] and target = 23:
+First comparison checks mid = 4 (value 16 < 23), advancing low to 5. Second comparison checks mid = 7 (value 56 > 23), moving high to 6. Third comparison checks mid = 5 (value 23 == 23), returning index 5.
+
+**Common Confusion**
+Applying Binary Search to an unsorted array produces incorrect results because comparing against the middle element provides no information about which half contains the target.
+
+**Why It Matters**
+Searching 1 billion sorted records requires at most 30 comparisons with Binary Search compared to 1 billion comparisons with linear scan.`
   },
   {
     keywords: ['photosynthesis', 'chlorophyll', 'calvin cycle', 'light reaction'],
     title: 'Photosynthesis & Cellular Energy Conversion',
     domain: 'Biology & Natural Sciences',
     formula: '6 CO₂ + 6 H₂O + Light Energy → C₆H₁₂O₆ (Glucose) + 6 O₂',
-    brief: `**Photosynthesis** is the biochemical process by which plants, algae, and cyanobacteria convert light energy, carbon dioxide ($CO_2$), and water ($H_2O$) into chemical energy (glucose) and oxygen ($O_2$).\n\n• **Stage 1 — Light-Dependent Reactions (Thylakoid Membranes)**: Sunlight splits water (photolysis), releasing $O_2$ and generating **ATP** and **NADPH**.\n• **Stage 2 — Calvin Cycle / Light-Independent Reactions (Stroma)**: Uses ATP and NADPH to fix $CO_2$ into glucose ($C_6H_{12}O_6$) via the enzyme **RuBisCO**.`,
-    explanation: `### 📖 Deep Explanation: Photosynthesis\n\n**1. Overall Chemical Equation**\n$$6\\text{CO}_2 + 6\\text{H}_2\\text{O} + \\text{Light Energy} \\xrightarrow{\\text{Chlorophyll}} \\text{C}_6\\text{H}_{12}\\text{O}_6 + 6\\text{O}_2$$\n\n**2. Two Coupled Phases Inside the Chloroplast**\n• **Phase A — Light-Dependent Reactions (Thylakoid Membrane)**:\n  1. **Photosystem II (P680)** absorbs photons, exciting electrons and splitting $H_2O$ into $2H^+ + \\frac{1}{2}O_2$ (photolysis).\n  2. Electrons travel through the Electron Transport Chain (ETC), pumping protons into the thylakoid lumen to drive **ATP Synthase** (photophosphorylation).\n  3. **Photosystem I (P700)** re-energizes electrons to reduce $NADP^+$ into **NADPH**.\n• **Phase B — The Calvin Cycle (Chloroplast Stroma)**:\n  1. **Carbon Fixation**: RuBisCO attaches $CO_2$ to a 5-carbon acceptor (RuBP).\n  2. **Reduction**: ATP and NADPH convert 3-PGA into G3P (glyceraldehyde-3-phosphate), the building block of glucose.\n  3. **Regeneration**: Remaining G3P molecules regenerate RuBP using ATP so the cycle continues.`
+    brief: `**Photosynthesis**
+Photosynthesis is the biochemical pathway by which plants, algae, and cyanobacteria convert light energy, carbon dioxide, and water into chemical energy (glucose) and oxygen.
+
+*Light-Dependent Reactions & Calvin Cycle*
+Light-dependent reactions in the thylakoid membranes split water to release oxygen and produce ATP and NADPH, which the Calvin Cycle in the stroma uses to fix carbon dioxide into glucose.
+
+**Formula**
+6 CO₂ + 6 H₂O + Light Energy → C₆H₁₂O₆ + 6 O₂
+
+**Example**
+Chlorophyll pigments inside leaf chloroplasts absorb red and blue wavelengths of sunlight to drive electron transport and carbohydrate synthesis.`,
+    explanation: `**Photosynthesis & Cellular Energy Conversion**
+Photosynthesis sustains nearly all life on Earth by capturing solar photons and storing their energy in the covalent chemical bonds of glucose while releasing molecular oxygen into the atmosphere.
+
+*Chloroplast Compartmentalization*
+The process is divided across two specialized regions of the chloroplast: the *Thylakoid Membranes* (site of the light-dependent reactions) and the fluid-filled *Stroma* (site of the Calvin Cycle).
+
+**Formula**
+6 CO₂ + 6 H₂O + Light Energy → C₆H₁₂O₆ + 6 O₂
+
+**How It Works**
+In the light-dependent reactions, Photosystem II absorbs photons to split water molecules (photolysis), releasing $O_2$ and driving proton gradients that synthesize ATP alongside NADPH. In the Calvin Cycle, the enzyme RuBisCO fixes $CO_2$ into organic intermediates, using ATP and NADPH to reduce carbon into G3P sugars.
+
+**Example**
+When a plant receives sunlight and opens its leaf stomata to take in $CO_2$, thylakoid electron transport continuously supplies the ATP and NADPH needed to build starch reserves.
+
+**Common Confusion**
+Assuming oxygen comes from carbon dioxide. Isotopic tracing proves that all released $O_2$ gas originates from the splitting of water ($H_2O$) during photolysis.
+
+**Why It Matters**
+Photosynthesis forms the primary carbon-fixation engine of global ecosystems and regulates atmospheric oxygen and carbon dioxide levels.`
   },
   {
     keywords: ['osi model', 'tcp', 'udp', 'three way handshake', '3-way handshake', 'computer network', 'subnet', 'routing', 'http'],
     title: 'Computer Networks: OSI Layers & TCP/UDP Transport',
     domain: 'Computer Networks',
     formula: 'TCP Handshake: SYN → SYN-ACK → ACK | Bandwidth-Delay Product = BW × RTT',
-    brief: `**Computer Networking** structures communication across the **7-Layer OSI Model** (Physical, Data Link, Network, Transport, Session, Presentation, Application).\n\n• **TCP (Transmission Control Protocol)**: Connection-oriented, reliable, ordered byte stream using a **3-Way Handshake** (\`SYN → SYN-ACK → ACK\`), flow control (sliding window), and congestion control.\n• **UDP (User Datagram Protocol)**: Connectionless, low-overhead datagrams with no retransmission delay — ideal for DNS, VoIP, and real-time streaming.`,
-    explanation: `### 📖 Deep Explanation: OSI Model & TCP vs. UDP Architecture\n\n**1. The 7-Layer OSI Reference Stack**\n1. **Physical (L1)**: Bitstream over fiber/copper/wireless (Hubs, Repeaters).\n2. **Data Link (L2)**: MAC addressing, Ethernet frames, ARP, switches, error detection (CRC).\n3. **Network (L3)**: Logical IP addressing, packet routing across subnets (Routers, IPv4/IPv6, ICMP).\n4. **Transport (L4)**: End-to-end process communication via ports (TCP & UDP).\n5. **Session / Presentation / Application (L5–L7)**: TLS encryption, serialization, HTTP/HTTPS, DNS, WebSockets.\n\n**2. TCP 3-Way Handshake & Reliability**\n• **Step 1 (\`SYN\`)**: Client sends initial sequence number $\\text{Seq}=x$.\n• **Step 2 (\`SYN-ACK\`)**: Server acknowledges $\\text{Ack}=x+1$ and sends its own $\\text{Seq}=y$.\n• **Step 3 (\`ACK\`)**: Client replies $\\text{Ack}=y+1$; full-duplex connection is established.\n\n**3. When to Choose TCP vs. UDP**\n• **TCP**: Banking, REST APIs, file transfers, database connections (where every byte must arrive intact).\n• **UDP**: Live video/audio calls, gaming telemetry, DNS lookups (where low latency matters more than retransmitting dropped packets).`
+    brief: `**OSI Reference Model & Transport Protocols**
+Computer networking organizes communication into seven modular layers: Physical, Data Link, Network, Transport, Session, Presentation, and Application.
+
+*TCP vs. UDP*
+*TCP* provides connection-oriented, reliable, ordered delivery via a three-way handshake, whereas *UDP* provides connectionless, low-latency datagram delivery without retransmission overhead.
+
+**Formula**
+TCP 3-Way Handshake: SYN (Seq=x) → SYN-ACK (Seq=y, Ack=x+1) → ACK (Ack=y+1)
+
+**Example**
+HTTPS web traffic and banking APIs use TCP to guarantee every byte arrives intact, while live video conferencing and DNS lookups use UDP for speed.`,
+    explanation: `**Computer Networks: OSI Layers & TCP/UDP Transport**
+Layered network architectures decouple physical signal transmission from high-level application logic so hardware and software protocols can evolve independently.
+
+*The Seven OSI Layers*
+• *Physical (L1) & Data Link (L2)*: Transmit raw bits over physical media and frame packets using MAC addresses and switches.
+• *Network (L3)*: Routes packets across interconnected subnets using logical IPv4/IPv6 addressing.
+• *Transport (L4)*: Provides process-to-process delivery via ports using TCP or UDP.
+• *Session, Presentation & Application (L5–L7)*: Handle TLS encryption, data formatting, and protocols such as HTTP, DNS, and WebSockets.
+
+**Core Concept**
+At Layer 4, engineers choose between reliability (*TCP*) and minimal latency (*UDP*) based on application tolerance for packet loss.
+
+**How It Works**
+TCP establishes a full-duplex connection through a three-way handshake (SYN, SYN-ACK, ACK), numbers every byte for ordered reassembly, and adjusts transmission rates using sliding-window flow control and congestion avoidance.
+
+**Example**
+Loading a financial dashboard over HTTPS uses TCP so no ledger numbers are dropped; a multiplayer game sends player coordinates via UDP so stale packets never block newer frames.
+
+**Common Confusion**
+Confusing Layer 2 MAC addresses (local hop-to-hop delivery within a LAN) with Layer 3 IP addresses (end-to-end logical routing across networks).
+
+**Why It Matters**
+Understanding transport and routing trade-offs is essential for debugging latency spikes, packet loss, and distributed microservice bottlenecks.`
   },
   {
     keywords: ['design thinking', 'empathize', 'ideate', 'prototype', 'double diamond', 'user centric'],
-    title: 'Design Thinking Methodology (5-Stage Human-Centered Framework)',
+    title: 'Design Thinking & Human-Centered Innovation',
     domain: 'Design Thinking & Product Innovation',
     formula: 'Empathize → Define → Ideate → Prototype → Test (Iterative Non-Linear Loop)',
-    brief: `**Design Thinking** is an iterative, human-centered problem-solving framework consisting of **5 core stages**:\n\n1. **Empathize**: Conduct user interviews, observation, and empathy mapping to uncover real human needs.\n2. **Define**: Synthesize findings into a clear, actionable **Point-of-View (POV) / Problem Statement**.\n3. **Ideate**: Brainstorm diverse solutions using divergent thinking (SCAMPER, Crazy 8s) without premature judgment.\n4. **Prototype**: Build low-fidelity, testable representations (wireframes, storyboards, mockups).\n5. **Test**: Validate prototypes with real users and iterate based on feedback.`,
-    explanation: `### 📖 Deep Explanation: 5-Stage Design Thinking & Double Diamond\n\n**1. Why Design Thinking Matters**\nTraditional engineering often jumps straight to building solutions before validating whether the right problem is being solved. Design Thinking separates **Problem Space** (Empathize + Define) from **Solution Space** (Ideate + Prototype + Test).\n\n**2. Stage-by-Stage Breakdown**\n• **Stage 1 — Empathize**: Use Empathy Maps (*Says, Thinks, Does, Feels*), shadowing, and 5-Whys interviews to eliminate assumptions.\n• **Stage 2 — Define**: Frame a human-centered problem statement: *"[User Persona] needs a way to [Verb/Need] because [Compelling Insight]."* Use **How Might We (HMW)** questions to open ideation.\n• **Stage 3 — Ideate**: Divergent phase — prioritize quantity and creative breadth before converging via dot-voting or Impact-Effort matrices.\n• **Stage 4 — Prototype**: Fail fast and cheap using paper sketches, clickable Figma flows, or role-play scenarios.\n• **Stage 5 — Test**: Observe users interacting with the prototype; feed insights back into Define or Prototype to refine the product.`
+    brief: `**Design Thinking Methodology**
+Design Thinking is an iterative, human-centered innovation framework organized around five stages: Empathize, Define, Ideate, Prototype, and Test.
+
+*Point-of-View (POV) & Rapid Prototyping*
+Insights from user observation are framed into a *Point-of-View (POV)* statement (*User + Need + Insight*), explored through *How Might We* ideation, and validated with low-fidelity prototypes.
+
+**Key Idea**
+Separate problem discovery (*Empathize* and *Define*) from solution building (*Ideate*, *Prototype*, and *Test*) so teams solve authentic human needs before writing production code.
+
+**Example**
+Testing a paper sketch of a mobile checkout flow with five users in one afternoon reveals confusing labels before any engineering sprint begins.`,
+    explanation: `**Design Thinking & Human-Centered Innovation**
+Design Thinking prevents teams from building technically polished products that fail in real-world adoption by anchoring every design decision in observed human behavior.
+
+*The Innovation Triad & Double Diamond*
+Breakthrough solutions balance *Desirability* (human need), *Feasibility* (technical capability), and *Viability* (business sustainability) across two diverge-converge diamonds: *Discover & Define* followed by *Develop & Deliver*.
+
+**Core Concept**
+Rather than following a rigid linear waterfall, Design Thinking operates as an iterative loop where prototype test findings regularly refine the problem statement or spark new ideation.
+
+**How It Works**
+In *Empathize*, teams use contextual interviews and Empathy Maps (*Says, Thinks, Does, Feels*) to uncover latent needs. In *Define*, findings converge into an actionable Point-of-View statement. In *Ideate*, teams diverge using *How Might We* questions before converging on candidates for *Prototype* and *Test*.
+
+**Example**
+Observing commuters struggling with ticket kiosks leads a team to prototype a simplified three-step paper interface and refine it live using a Feedback Capture Grid (*Likes, Deltas, Questions, Ideas*).
+
+**Common Confusion**
+Treating early prototypes as polished demos meant to impress stakeholders instead of disposable learning tools built to expose usability flaws early and cheaply.
+
+**Why It Matters**
+Validating desirability with low-fidelity prototypes reduces engineering rework and aligns cross-functional product teams around verified user outcomes.`
   },
   {
     keywords: ['inventory', 'ledger', 'double entry', 'stocksense', 'fsm', 'warehouse', 'stockout', 'idempotency', 'lock ordering'],
     title: 'Enterprise Inventory Engine: Double-Entry Ledger, FSM & ACID Locking',
     domain: 'Enterprise Logistics & Inventory Architecture',
     formula: 'Stock_After = Stock_Before + Δ_Movement | Lock Order: ORDER BY product_id ASC',
-    brief: `**Enterprise Inventory Architecture** guarantees zero negative stock and 100% auditability using four pillars:\n\n• **Centralized Finite State Machine (FSM)**: \`DRAFT → READY → DONE\` (or \`CANCELED\`). Terminal states (\`DONE\`, \`CANCELED\`) are immutable.\n• **ACID Row-Level Locking**: Acquires \`SELECT ... FOR UPDATE\` locks sorted deterministically by \`product_id ASC\` to prevent deadlocks.\n• **Immutable Double-Entry Stock Ledger**: Every receipt, delivery, transfer, or adjustment writes an append-only audit record (*Who, What, When, Where, Before, After*).\n• **Idempotency & Decimal Safety**: Uses \`Idempotency-Key\` deduplication and exact \`NUMERIC\` decimal arithmetic.`,
-    explanation: `### 📖 Deep Explanation: Enterprise Inventory & Double-Entry Logistics Engine\n\n**1. Finite State Machine (FSM) Invariants**\nAllowed transitions are strictly enforced server-side:\n• \`draft → ready\` | \`draft → canceled\`\n• \`ready → done\` | \`ready → canceled\`\n• \`done → ∅\` (Terminal) | \`canceled → ∅\` (Terminal — a canceled operation can NEVER return to ready or be validated).\n\n**2. Deterministic Lock Ordering (Deadlock Prevention)**\nWhen two concurrent deliveries or transfers touch overlapping products (e.g., \`[Product 42, Product 7, Product 19, Product 3]\`), sorting items by \`product_id ASC\` (\`3 → 7 → 19 → 42\`) before executing \`SELECT quantity FROM stocks WHERE ... FOR UPDATE\` eliminates circular wait (Coffman Condition #4).\n\n**3. Exact Decimal Arithmetic & Immutable Ledger**\nFloating-point numbers (\`0.1 + 0.2 = 0.30000000000000004\`) corrupt fractional inventory units (kg, liters, meters). Using exact SQL \`NUMERIC(18,4)\` ensures \`Stock_Before + Movement == Stock_After\` holds across every ledger entry.`
+    brief: `**Enterprise Inventory & Double-Entry Logistics Engine**
+StockSense guarantees zero negative inventory and complete auditability using a deterministic Finite State Machine, ACID row locking, and an immutable stock ledger.
+
+*Finite State Machine & Lock Ordering*
+Operations follow ` + '`DRAFT → READY → DONE`' + ` (or ` + '`CANCELED`' + `), and multi-item validations acquire row locks sorted by ` + '`product_id ASC`' + ` to prevent database deadlocks.
+
+**Formula**
+Stock_After = Stock_Before + Movement   (Exact NUMERIC(18,4) Decimal Arithmetic)
+
+**Example**
+Validating a delivery of 15 units from Warehouse A atomically verifies on-hand stock, decrements inventory, and appends an immutable ledger entry.`,
+    explanation: `**Enterprise Inventory Engine: Double-Entry Ledger, FSM & ACID Locking**
+High-volume warehouse and logistics platforms must prevent race conditions, negative stock balances, and duplicate mutations when concurrent operators validate receipts, deliveries, and transfers.
+
+*Centralized Finite State Machine (FSM)*
+Every stock operation transitions through strict server-verified states: ` + '`draft → ready → done`' + ` or ` + '`canceled`' + `. Terminal states (` + '`done`' + ` and ` + '`canceled`' + `) are permanently immutable.
+
+**Core Concept**
+Every stock change is modeled as an atomic double-entry movement between source and destination locations, backed by row-level pessimistic locking and idempotency keys.
+
+**How It Works**
+Before mutating stock rows, the engine deduplicates requests via ` + '`Idempotency-Key`' + `, sorts line items deterministically by ` + '`product_id ASC`' + ` to eliminate circular wait deadlocks, and executes ` + '`SELECT quantity FROM stocks ... FOR UPDATE`' + `. It then verifies sufficient quantity and writes an append-only Stock Ledger record.
+
+**Example**
+If two warehouse clerks simultaneously click Validate on overlapping deliveries for Products 7 and 42, deterministic lock ordering ensures both transactions lock Product 7 before Product 42, serializing cleanly without deadlocking.
+
+**Common Confusion**
+Using IEEE-754 floating-point numbers for fractional inventory units (such as kilograms or liters), which introduces rounding drift (` + '`0.1 + 0.2 = 0.30000000000000004`' + `). Exact decimal arithmetic (` + '`NUMERIC(18,4)`' + `) is mandatory.
+
+**Why It Matters**
+Combining FSM invariants, ordered ACID locking, and an immutable ledger ensures 100% financial and physical inventory reconciliation.`
   },
   {
     keywords: ['eiffel tower', '1889', 'gustave eiffel'],
     title: 'Construction of the Eiffel Tower (1889)',
     domain: 'World History & Structural Engineering',
-    formula: 'Constructed: Jan 28, 1887 – Mar 31, 1889 | Height: 330 meters (1,083 ft)',
-    brief: `**The Eiffel Tower was built in 1889** (construction began on January 28, 1887 and concluded on March 31, 1889) as the entrance arch for the **1889 Exposition Universelle (World's Fair)** in Paris, celebrating the centennial of the French Revolution.`,
-    explanation: `### 📖 Deep Explanation: When & How the Eiffel Tower Was Built\n\n**1. Direct Answer**\n**The Eiffel Tower was built in 1889** (taking 2 years, 2 months, and 5 days from **January 1887 to March 31, 1889**).\n\n**2. How the LLM Processes This Query (Tokenization → Inference → Response)**\n• **Step 1 — Tokenization**: Splits *"When was the Eiffel Tower built?"* into subword tokens: \`[When]\` \`[was]\` \`[the]\` \`[Eiffel Tower built?]\`.\n• **Step 2 — Attention & Knowledge Retrieval**: Maps tokens to historical engineering entities (*Gustave Eiffel, Paris 1889 World's Fair, Puddle Iron Lattice*).\n• **Step 3 — Grounded Synthesis**: Outputs *"The Eiffel Tower was built in 1889."* along with structural engineering context (18,038 wrought-iron parts joined by 2.5 million rivets).`
+    formula: 'Constructed: Jan 28, 1887 – Mar 31, 1889 | Height: 330 meters',
+    brief: `**Construction of the Eiffel Tower**
+The Eiffel Tower was built in 1889 (constructed between January 28, 1887 and March 31, 1889) as the entrance arch for the 1889 Exposition Universelle in Paris.
+
+*Structural Engineering Milestone*
+Designed by Gustave Eiffel’s engineering firm using 18,038 precision puddle-iron parts joined by 2.5 million rivets, it stood as the world's tallest man-made structure for 41 years.`,
+    explanation: `**Construction of the Eiffel Tower (1889)**
+The Eiffel Tower was completed on March 31, 1889 in Paris, France, serving as the centerpiece of the 1889 World's Fair marking the centennial of the French Revolution.
+
+*Precision Prefabrication*
+All 18,038 wrought-iron structural components were calculated to atenth of a millimeter and prefabricated at Gustave Eiffel's factory in Levallois-Perret before being assembled on-site.
+
+**Core Concept**
+The tower's curved lattice profile was mathematically engineered to resist wind bending moments efficiently while minimizing structural weight.
+
+**Example**
+Completed in just 2 years, 2 months, and 5 days with zero fatal accidents during construction, the tower demonstrated the viability of large-scale iron and steel skyward architecture.`
   }
 ];
 
 export class AIOrchestrator {
   /**
-   * Sanitize untrusted document or user text to prevent Prompt Injection
+   * Sanitize untrusted document or user text to prevent Prompt Injection and strip extraction noise
    */
   static sanitizeUntrustedText(text = '') {
     return String(text)
@@ -93,7 +262,6 @@ export class AIOrchestrator {
   static detectIntent(query = '', scopedDocument = '') {
     const q = query.toLowerCase().trim();
 
-    // Check explicit adaptive learning / 3-phase curriculum triggers
     if (
       /\b(teach me|start learning|3 phase|three phase|learning mode|learn this|curriculum|study plan for this)\b/i.test(q)
     ) {
@@ -104,7 +272,6 @@ export class AIOrchestrator {
       };
     }
 
-    // Check Grand Quiz request
     if (/\b(grand quiz|final quiz|comprehensive quiz|all phases quiz)\b/i.test(q)) {
       return {
         intent: INTENT_CLASSES.GRAND_QUIZ,
@@ -113,7 +280,6 @@ export class AIOrchestrator {
       };
     }
 
-    // Check Phase / Topic Quiz request
     if (/\b(quiz me|create a quiz|generate a quiz|mcq|test me|practice questions)\b/i.test(q)) {
       return {
         intent: INTENT_CLASSES.QUIZ_REQUEST,
@@ -122,7 +288,6 @@ export class AIOrchestrator {
       };
     }
 
-    // Check Question Auto-Solver request
     if (/\b(solve|why was i wrong|step by step solution|which option is correct)\b/i.test(q)) {
       return {
         intent: INTENT_CLASSES.AUTO_SOLVER,
@@ -131,7 +296,6 @@ export class AIOrchestrator {
       };
     }
 
-    // Determine if user explicitly requested Brief vs Explanation depth
     let preferredDepth = null;
     if (/\b(brief|short|concise|tldr|tl;dr|quick summary|in short|bullet points only)\b/i.test(q)) {
       preferredDepth = 'brief';
@@ -139,7 +303,6 @@ export class AIOrchestrator {
       preferredDepth = 'explanation';
     }
 
-    // Check if query references uploaded/course material
     const allDocs = ClientIntelligenceEngine.getAllDocuments();
     const mentionsUploadedDoc =
       Boolean(scopedDocument) ||
@@ -161,8 +324,10 @@ export class AIOrchestrator {
       };
     }
 
-    // Check if strong lexical match exists in course/uploaded RAG store
-    const retrieval = ClientIntelligenceEngine.retrieveGroundedUnits(query, scopedDocument ? { document: scopedDocument } : null);
+    const retrieval = ClientIntelligenceEngine.retrieveGroundedUnits(
+      query,
+      scopedDocument ? { document: scopedDocument } : null
+    );
     if (retrieval.topMatches[0] && retrieval.topMatches[0].rrfScore >= 1.5) {
       return {
         intent: INTENT_CLASSES.MATERIAL_QUESTION,
@@ -171,7 +336,6 @@ export class AIOrchestrator {
       };
     }
 
-    // Otherwise route to General-Purpose LLM Knowledge Engine
     return {
       intent: INTENT_CLASSES.GENERAL_QUESTION,
       preferredDepth: preferredDepth || 'explanation',
@@ -181,15 +345,13 @@ export class AIOrchestrator {
 
   /**
    * Main Orchestrator Execution Entrypoint
-   * Returns BOTH `brief_content` and `explanation_content` so the UI can toggle between
-   * ⚡ Brief and 📖 Explanation instantaneously without re-fetching!
+   * Returns clean `brief_content` and `explanation_content` for instant toggling.
    */
   static orchestrateResponse({
     query,
     responseDepth = 'explanation', // 'brief' | 'explanation'
     pedagogicalMode = 'beginner',
-    scopedDocument = '',
-    conversationHistory = []
+    scopedDocument = ''
   }) {
     const cleanQuery = this.sanitizeUntrustedText(query);
     const intentInfo = this.detectIntent(cleanQuery, scopedDocument);
@@ -208,14 +370,15 @@ export class AIOrchestrator {
     const explicitlyAskedMaterial = /\b(in my uploaded|according to my pdf|in my document|from my file)\b/i.test(cleanQuery);
     if (explicitlyAskedMaterial && !hasStrongRagEvidence) {
       const genFallback = this.buildGeneralKnowledgeResponse(cleanQuery, pedagogicalMode);
-      const notice = `> **Source Grounding Notice:** I couldn't find direct evidence for *"${cleanQuery}"* inside your currently selected document (${scopedDocument || 'uploaded materials'}). Below is a helpful answer combining **LLM + Outside Knowledge**:\n\n`;
+      const cleanDocLabel = ContentSanitizer.cleanDocumentTitle(scopedDocument || 'uploaded material');
+      const notice = `*Source Note: This topic was not found directly in ${cleanDocLabel}. Below is a general explanation.*\n\n`;
       const ragDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
         query: cleanQuery,
         scopedDocument,
         chunksScanned: retrieval.totalChunksScanned,
         bm25Score: topMatch?.bm25Score || 0,
         vectorScore: 0.45,
-        sourceOrigin: 'Answer Combined with LLM & Outside Knowledge'
+        sourceOrigin: 'General AI Knowledge Synthesis'
       });
 
       return {
@@ -224,7 +387,7 @@ export class AIOrchestrator {
         mode: activeDepth,
         pedagogical_mode: pedagogicalMode,
         grounding_status: 'PARTIALLY_SUPPORTED',
-        source_origin: 'Answer Combined with LLM & Outside Knowledge',
+        source_origin: 'General AI Knowledge Synthesis',
         brief_content: notice + genFallback.brief,
         explanation_content: notice + genFallback.explanation,
         answer: activeDepth === 'brief' ? notice + genFallback.brief : notice + genFallback.explanation,
@@ -263,24 +426,29 @@ export class AIOrchestrator {
         retrieval.topMatches[1]
       );
 
+      const cleanDocTitle = ContentSanitizer.cleanDocumentTitle(topMatch.doc.filename);
+      const cleanLoc = ContentSanitizer.cleanText(topMatch.unit.location_label);
+
       const eli12Prefix =
         pedagogicalMode === 'eli12'
-          ? `### 🧒 ELI12 (Explain Like I'm 12) — ${syn.concept}\nImagine two teammates sharing a single toolkit: if each person grabs half the tools and refuses to share until the other finishes, nobody can build anything! Here is how your course material explains **${syn.concept}** simply:\n\n`
+          ? `**Explain Like I'm 12 — ${syn.concept}**\nImagine two teammates sharing a single toolkit: if each person grabs half the tools and waits for the other to finish first, nobody can build anything. Here is how your material explains ${syn.concept} step by step:\n\n`
           : '';
 
-      const briefVersion = `### ⚡ Brief Summary — ${syn.concept}\n${syn.headline}\n\n${syn.bulletPoints
+      const cleanBullets = syn.bulletPoints
         .slice(0, 3)
-        .map((b) => `• ${b}`)
-        .join('\n')}\n\n**Key Rule / Formula:** \`${syn.formula}\`\n📍 *Source: ${topMatch.doc.filename} → ${topMatch.unit.location_label}*`;
+        .map((b) => ContentSanitizer.cleanText(b).replace(/^\d+\.\s*/, ''))
+        .join('\n\n');
+
+      const briefVersion = `**${syn.concept}**\n${ContentSanitizer.cleanText(syn.headline)}\n\n**Key Idea**\n${cleanBullets}\n\n**Formula**\n${syn.formula}\n\n*Source: ${cleanDocTitle} — ${cleanLoc}*`;
 
       const explanationVersion = eli12Prefix ? eli12Prefix + baseTutorRes.answer : baseTutorRes.answer;
       const ragDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
         query: cleanQuery,
-        scopedDocument: topMatch.doc.filename,
+        scopedDocument: cleanDocTitle,
         chunksScanned: retrieval.totalChunksScanned,
         bm25Score: topMatch.bm25Score,
         vectorScore: 0.98,
-        sourceOrigin: `Grounded in ${topMatch.doc.filename} + LLM Synthesis`
+        sourceOrigin: `Source: ${cleanDocTitle}`
       });
 
       return {
@@ -289,11 +457,16 @@ export class AIOrchestrator {
         mode: activeDepth,
         pedagogical_mode: pedagogicalMode,
         grounding_status: 'SUPPORTED',
-        source_origin: `Grounded in ${topMatch.doc.filename}`,
+        source_origin: `Source: ${cleanDocTitle} — ${cleanLoc}`,
         brief_content: briefVersion,
         explanation_content: explanationVersion,
         answer: activeDepth === 'brief' ? briefVersion : explanationVersion,
-        citations: baseTutorRes.citations || [],
+        citations: (baseTutorRes.citations || []).map((c) => ({
+          ...c,
+          document: ContentSanitizer.cleanDocumentTitle(c.document),
+          location_label: ContentSanitizer.cleanText(c.location_label),
+          excerpt: ContentSanitizer.cleanText(c.excerpt)
+        })),
         follow_up_questions: baseTutorRes.follow_up_questions || syn.followUps,
         recommended_next_action: baseTutorRes.recommended_next_action,
         tokenization,
@@ -307,7 +480,7 @@ export class AIOrchestrator {
       };
     }
 
-    // 4. General-Purpose LLM Response (Combines LLM + Outside Knowledge as shown in Diagram 1 Step 7)
+    // 4. General-Purpose LLM Response
     const genRes = this.buildGeneralKnowledgeResponse(cleanQuery, pedagogicalMode);
     const ragDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
       query: cleanQuery,
@@ -315,7 +488,7 @@ export class AIOrchestrator {
       chunksScanned: retrieval.totalChunksScanned,
       bm25Score: topMatch?.bm25Score || 1.2,
       vectorScore: 0.92,
-      sourceOrigin: `Answer Combined with LLM & Outside Knowledge (${genRes.domain})`
+      sourceOrigin: `${genRes.domain}`
     });
 
     return {
@@ -324,7 +497,7 @@ export class AIOrchestrator {
       mode: activeDepth,
       pedagogical_mode: pedagogicalMode,
       grounding_status: 'GENERAL_AI',
-      source_origin: `Answer Combined with LLM & Outside Knowledge (${genRes.domain})`,
+      source_origin: `${genRes.domain}`,
       brief_content: genRes.brief,
       explanation_content: genRes.explanation,
       answer: activeDepth === 'brief' ? genRes.brief : genRes.explanation,
@@ -358,12 +531,11 @@ export class AIOrchestrator {
   }
 
   /**
-   * Generates accurate, structured Brief AND Explanation responses for any general query
+   * Generates accurate, structured Brief AND Deep Explanation responses for any general query
    */
-  static buildGeneralKnowledgeResponse(query = '', pedagogicalMode = 'beginner') {
+  static buildGeneralKnowledgeResponse(query = '') {
     const qLower = query.toLowerCase();
 
-    // Check curated rich topics first
     const matchedTopic = GENERAL_KNOWLEDGE_TOPICS.find((t) =>
       t.keywords.some((kw) => qLower.includes(kw))
     );
@@ -372,7 +544,7 @@ export class AIOrchestrator {
       return {
         title: matchedTopic.title,
         domain: matchedTopic.domain,
-        brief: `### ⚡ Brief Mode — ${matchedTopic.title}\n${matchedTopic.brief}\n\n**Key Formula / Invariant:** \`${matchedTopic.formula}\``,
+        brief: matchedTopic.brief,
         explanation: matchedTopic.explanation,
         followUps: [
           `Teach me ${matchedTopic.title} in 3 Adaptive Phases`,
@@ -382,18 +554,48 @@ export class AIOrchestrator {
       };
     }
 
-    // Dynamic General-Purpose Topic Synthesis for ANY user question
-    const cleanedTopic = query
-      .replace(/^(what is|what are|explain|how does|how do|tell me about|define|give me a summary of|summarize|why is)\s+/i, '')
-      .replace(/[?.!]+$/, '')
-      .trim();
+    const cleanedTopic = ContentSanitizer.cleanText(
+      query
+        .replace(/^(what is|what are|explain|how does|how do|tell me about|define|give me a summary of|summarize|why is)\s+/i, '')
+        .replace(/[?.!]+$/, '')
+        .trim()
+    );
     const displayTopic = cleanedTopic
       ? cleanedTopic.charAt(0).toUpperCase() + cleanedTopic.slice(1)
       : 'Core Concept Analysis';
 
-    const brief = `### ⚡ Brief Mode — ${displayTopic}\n• **Core Definition**: **${displayTopic}** is a foundational principle that structures how inputs, states, and constraints interact to produce predictable, verifiable outcomes.\n• **Primary Mechanism**: Operates by validating preconditions, transforming state through deterministic steps, and enforcing correctness invariants.\n• **Why It Matters**: Enables scalable problem-solving, prevents edge-case failures, and provides measurable performance guarantees.`;
+    const brief = `**${displayTopic}**
+${displayTopic} is a foundational concept that defines how inputs, preconditions, and governing rules interact to produce reliable, verifiable outcomes.
 
-    const explanation = `### 📖 Deep Explanation — ${displayTopic}\n\n**1. Conceptual Foundation & Definition**\n**${displayTopic}** addresses the fundamental question of how complex systems or processes maintain correctness, efficiency, and clarity under real-world constraints. Rather than treating operations as isolated events, it models them as structured transformations with clear inputs, invariants, and outputs.\n\n**2. Step-by-Step Mechanism & Architecture**\n1. **Input & Precondition Validation**: Identify the boundary conditions and required assumptions before execution begins.\n2. **Core Transformation / Processing**: Apply the governing rules or algorithmic steps systematically.\n3. **Verification & Feedback Loop**: Measure the resulting state against expected invariants to guarantee reliability.\n\n**3. Concrete Example & Practical Application**\nWhen applying **${displayTopic}** in practice:\n• **Scenario**: Suppose you are designing or analyzing a workflow involving ${displayTopic.toLowerCase()}.\n• **Execution**: First isolate the base case (Phase 1 Foundation), then model the interaction between components (Phase 2 Relationships), and finally optimize for high load or edge cases (Phase 3 Advanced Application).\n\n**4. Common Pitfalls & Best Practices**\n• **Pitfall**: Applying rules by rote memorization without checking whether prerequisite conditions hold.\n• **Best Practice**: Use our **3-Phase Adaptive Learning Mode** (*"Teach me ${displayTopic}"*) to master the fundamentals, test yourself with Phase MCQs, and verify mastery in the Grand Quiz!`;
+*Primary Mechanism*
+Operates by verifying baseline assumptions, applying a structured transformation, and maintaining system invariants across state changes.
+
+**Key Idea**
+Understanding the preconditions and boundary constraints of ${displayTopic} prevents common implementation errors and supports scalable problem solving.
+
+**Example**
+When analyzing a problem involving ${displayTopic.toLowerCase()}, first confirm the foundational assumptions hold before evaluating downstream edge cases.`;
+
+    const explanation = `**${displayTopic}**
+${displayTopic} addresses how systems and analytical workflows maintain accuracy, consistency, and efficiency under real-world constraints.
+
+*Foundational Definition*
+Rather than treating operations as isolated events, ${displayTopic} models them as structured transformations governed by clear inputs, preconditions, and invariants.
+
+**Core Concept**
+Every application of ${displayTopic} separates baseline requirements (what must be true before starting) from operational mechanics (how state evolves step by step).
+
+**How It Works**
+First, validate the input parameters and boundary conditions. Second, apply the governing transformation rule while preserving domain invariants. Third, verify the output state against expected performance and correctness criteria.
+
+**Example**
+In a practical case study of ${displayTopic.toLowerCase()}, isolating the foundational rules first makes it straightforward to trace intermediate state transitions and resolve edge-case bottlenecks.
+
+**Common Confusion**
+Applying formulas or procedures by rote memorization without checking whether the underlying prerequisite conditions are satisfied.
+
+**Why It Matters**
+Mastering ${displayTopic} builds a transferable mental model for tackling both structured assessments and complex real-world engineering challenges.`;
 
     return {
       title: displayTopic,
@@ -408,9 +610,6 @@ export class AIOrchestrator {
     };
   }
 
-  /**
-   * 6-Step Anatomy of a Query Trace (Matches Diagram 3: The Anatomy of a ChatGPT Query)
-   */
   static buildAnatomyTrace(intent, engineUsed, chunksScanned, groundingState) {
     return [
       { step: 1, name: 'Secure Ingress & Context Assembly', detail: `Sanitized input • Intent: ${intent}` },

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { FileText, Presentation, Video, Image as ImageIcon, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { ContentSanitizer } from '../../services/contentSanitizer';
 
 export const SourceCitation = ({ citation, onJump }) => {
   const [expanded, setExpanded] = useState(false);
   if (!citation) return null;
 
   const stype = (citation.source_type || 'pdf').toLowerCase();
-  const doc = citation.document || citation.source_file || 'Course Source';
-  const label = citation.location_label || 'Location';
-  const excerpt = citation.excerpt || '';
+  const doc = ContentSanitizer.cleanDocumentTitle(citation.document || citation.source_file || 'Course Source');
+  const label = ContentSanitizer.cleanText(citation.location_label || 'Page 1');
+  const excerpt = ContentSanitizer.cleanText(citation.excerpt || '');
   const relevance = Math.round((citation.relevance || 0.9) * 100);
 
   const getIcon = () => {

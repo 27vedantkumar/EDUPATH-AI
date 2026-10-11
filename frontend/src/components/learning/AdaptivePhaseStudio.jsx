@@ -22,10 +22,18 @@ import { EducationalContentRenderer } from '../common/EducationalContentRenderer
 
 export const AdaptivePhaseStudio = ({
   documentName = '',
+  scopedDocument = '',
   customTopic = '',
+  initialTopic = '',
   onAskTutorAboutConcept,
-  onCloseStudio
+  onAskTutorQuestion,
+  onCloseStudio,
+  onClose
 }) => {
+  const effectiveDocName = documentName || scopedDocument || '';
+  const effectiveTopic = customTopic || initialTopic || '';
+  const handleAskTutor = onAskTutorAboutConcept || onAskTutorQuestion;
+  const handleClose = onCloseStudio || onClose;
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState('phase_1'); // 'phase_1' | 'phase_2' | 'phase_3' | 'grand_quiz'
   const [viewMode, setViewMode] = useState('study'); // 'study' | 'quiz' | 'phase_result' | 'grand_intro' | 'grand_quiz' | 'grand_report'
@@ -39,7 +47,10 @@ export const AdaptivePhaseStudio = ({
   const [quizAnswers, setQuizAnswers] = useState({});
 
   useEffect(() => {
-    const loaded = AdaptivePhaseEngine.createOrLoadSession({ documentName, customTopic });
+    const loaded = AdaptivePhaseEngine.createOrLoadSession({
+      documentName: effectiveDocName,
+      customTopic: effectiveTopic
+    });
     setSession(loaded);
     if (loaded) {
       const targetP = loaded.currentPhaseNumber || 1;
@@ -47,7 +58,7 @@ export const AdaptivePhaseStudio = ({
       setViewMode('study');
       setShowQuickCheckAnswer(false);
     }
-  }, [documentName, customTopic]);
+  }, [effectiveDocName, effectiveTopic]);
 
   if (!session) return null;
 
@@ -124,7 +135,7 @@ export const AdaptivePhaseStudio = ({
   const handleResetCurriculum = () => {
     const fresh = AdaptivePhaseEngine.regenerateSession({
       documentName: session.sourceDocument,
-      customTopic
+      customTopic: effectiveTopic
     });
     setSession({ ...fresh });
     setActiveTab('phase_1');
@@ -191,9 +202,9 @@ export const AdaptivePhaseStudio = ({
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
           </button>
-          {onCloseStudio && (
+          {handleClose && (
             <button
-              onClick={onCloseStudio}
+              onClick={handleClose}
               className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
             >
               Back to Chat
@@ -647,9 +658,9 @@ export const AdaptivePhaseStudio = ({
                   {activePhase.performance.weakConcepts.map((c, i) => (
                     <li key={i} className="flex items-center justify-between gap-2">
                       <span>• {ContentSanitizer.cleanText(c)}</span>
-                      {onAskTutorAboutConcept && (
+                      {handleAskTutor && (
                         <button
-                          onClick={() => onAskTutorAboutConcept(c)}
+                          onClick={() => handleAskTutor(c)}
                           className="text-xs text-indigo-300 hover:underline font-semibold shrink-0"
                         >
                           Ask Tutor →
