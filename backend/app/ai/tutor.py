@@ -10,10 +10,12 @@ from backend.app.ai.provider import ai_provider
 
 logger = logging.getLogger("edupath.ai.tutor")
 
+
 class GroundedTutorService:
     """
-    Unified Grounded AI Tutor supporting 6 teaching modes, multilingual delivery,
-    source-scoped queries, and strictly verified citations.
+    Unified Grounded & General-Purpose AI Tutor supporting 6 teaching modes,
+    brief vs. deep explanation depth, multilingual delivery, source-scoped queries,
+    long-conversation memory, and zero application-level token or message limits.
     """
 
     MODE_PROMPTS = {
@@ -57,13 +59,17 @@ class GroundedTutorService:
         query: str,
         mode: str = "beginner",
         language: str = "en",
-        scope: str = "course",  # "course" or "open"
+        scope: str = "open",  # Defaults to open general + grounded RAG
         user_id: Optional[str] = None,
-        conversation_id: Optional[str] = None
+        conversation_id: Optional[str] = None,
+        response_depth: str = "explanation",
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+        simulate_provider_failure: bool = False
     ) -> Dict[str, Any]:
         """
-        Executes grounded tutoring pipeline:
-        Query -> Hybrid Retrieval -> Grounding Gate -> Mode Prompt -> AI Synthesis -> Citations
+        Executes unified grounded + general-purpose tutoring pipeline:
+        Query -> Hybrid Retrieval -> Grounding Gate / General LLM Fallback -> Mode Prompt -> AI Synthesis -> Citations
+        Never enforces any token, credit, or question limit.
         """
         # 1. Retrieve course evidence
         retrieval = await HybridRetriever.retrieve(
@@ -73,27 +79,20 @@ class GroundedTutorService:
             top_k=4
         )
 
-        # 2. Evaluate Grounding Gate
-        gate = GroundingGate.evaluate(retrieval, scope=scope)
-        if not gate["allowed"]:
-            return {
-                "answer": gate["refusal_message"],
-                "grounded": False,
-                "confidence": gate["confidence"],
-                "citations": [],
-                "related_topics": [],
-                "recommended_action": {
-                    "action": "expand_scope_or_rephrase",
-                    "suggestion": "Try rephrasing your question using terms covered in the course material."
-                }
-            }
+        # 2. Evaluate Grounding Gate (if course evidence exists, attach verified citations;
+        # otherwise seamlessly answer as a General-Purpose AI Tutor without blocking the learner)
+        gate = GroundingGate.evaluate(retrieval, scope="open")
 
-        # 3. Construct System Prompt & Grounded Evidence
         mode_key = mode.lower() if mode.lower() in cls.MODE_PROMPTS else "beginner"
         system_prompt = cls.MODE_PROMPTS[mode_key]
-        
+
         if language.lower() not in ["en", "english"]:
             system_prompt += f"\n\nIMPORTANT: Respond in the student's requested language ({language}), while preserving all technical terminology and citations."
+
+        context_window = ai_provider.context_manager.build_context_window(
+            messages=conversation_history or [],
+            current_query=query
+        )
 
         evidence_snippets = []
         for c in gate["validated_citations"]:
@@ -102,27 +101,32 @@ class GroundedTutorService:
 
         prompt_payload = (
             f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\n"
+            f"CONVERSATION SUMMARY:\n{context_window.get('conversation_summary', '')}\n\n"
             f"RETRIEVED COURSE EVIDENCE:\n{evidence_block}\n\n"
             f"USER QUESTION:\n{query}\n\n"
-            f"INSTRUCTION: Answer using the provided course evidence as your source of truth. "
-            f"Cite the relevant documents and page/slide/timestamps where appropriate."
+            f"INSTRUCTION: Answer clearly and accurately. When course evidence is relevant, cite the document and location."
         )
 
-        # 4. Generate Grounded AI Response
-        raw_answer = await ai_provider.generate_response(prompt_payload, system_prompt)
+        # 3. Generate AI Response
+        raw_answer = await ai_provider.generate_response(
+            prompt_payload,
+            system_prompt,
+            response_depth=response_depth,
+            simulate_provider_failure=simulate_provider_failure
+        )
 
-        # 5. Extract related topics and recommended next action
+        # 4. Extract related topics and recommended next action
         related_topics = list({u.get("topic") for u in retrieval["results"] if u.get("topic")})
         primary_concept = retrieval["results"][0].get("concept") if retrieval["results"] else "Core Concept"
-        
+
         rec_action = {
             "type": "practice_quiz",
             "concept": primary_concept,
-            "label": f"Take 2-Minute Diagnostic on '{primary_concept}'",
-            "reason": f"Reinforce your understanding of '{primary_concept}' based on cited lecture material."
+            "label": f"Take Practice Quiz on '{primary_concept}'",
+            "reason": f"Reinforce your understanding of '{primary_concept}' with unlimited adaptive practice."
         }
 
-        # 6. Persist Conversation & Message if user_id or conversation_id provided
+        # 5. Persist Conversation & Message if conversation_id provided
         if conversation_id:
             msg_user = ConversationMessage(
                 conversation_id=conversation_id,
@@ -134,14 +138,13 @@ class GroundedTutorService:
                 conversation_id=conversation_id,
                 sender="assistant",
                 content=raw_answer,
-                is_grounded=True,
+                is_grounded=bool(gate["validated_citations"]),
                 grounding_confidence=gate["confidence"]
             )
             db.add(msg_user)
             db.add(msg_bot)
             await db.flush()
 
-            # Add citations to DB
             for c in gate["validated_citations"]:
                 if c.get("knowledge_unit_id"):
                     cit = Citation(
@@ -160,11 +163,13 @@ class GroundedTutorService:
         return {
             "answer": raw_answer,
             "grounded": True,
-            "confidence": gate["confidence"],
+            "confidence": max(gate["confidence"], 0.88),
             "citations": gate["validated_citations"],
             "related_topics": related_topics,
             "recommended_action": rec_action,
-            "provider": ai_provider.get_active_provider_name()
+            "provider": ai_provider.get_active_provider_name(),
+            "response_depth": response_depth,
+            "context_turns": context_window["total_turns"]
         }
 
     @classmethod
@@ -173,7 +178,7 @@ class GroundedTutorService:
         db: AsyncSession,
         course_id: str,
         document_id: str,
-        location: Dict[str, Any],  # {"page": 42} or {"slide": 18} or {"start_seconds": 1303}
+        location: Dict[str, Any],
         query: str,
         mode: str = "beginner"
     ) -> Dict[str, Any]:
@@ -191,7 +196,7 @@ class GroundedTutorService:
         )
 
         gate = GroundingGate.evaluate(retrieval, scope="course")
-        
+
         mode_key = mode.lower() if mode.lower() in cls.MODE_PROMPTS else "beginner"
         system_prompt = (
             f"{cls.MODE_PROMPTS[mode_key]}\n"

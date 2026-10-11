@@ -9,13 +9,17 @@ from backend.app.security.auth import AuthService
 
 router = APIRouter(prefix="/tutor", tags=["Grounded AI Tutor"])
 
+
 class TutorAskRequest(BaseModel):
-    course_id: str
+    course_id: str = "OS_101"
     message: str
     mode: Optional[str] = "beginner"  # beginner, exam, deep_dive, interview, socratic, bilingual
     language: Optional[str] = "en"
-    scope: Optional[str] = "course"  # course or open
+    scope: Optional[str] = "open"  # open or course
     conversation_id: Optional[str] = None
+    response_depth: Optional[str] = "explanation"  # brief or explanation
+    conversation_history: Optional[List[Dict[str, Any]]] = None
+
 
 class SourceQuestionRequest(BaseModel):
     course_id: str
@@ -24,26 +28,29 @@ class SourceQuestionRequest(BaseModel):
     question: str
     mode: Optional[str] = "beginner"
 
+
 @router.post("/ask")
 async def ask_tutor(req: TutorAskRequest, db: AsyncSession = Depends(get_db)):
     """
-    Submits a grounded query to the AI Tutor.
-    Enforces hybrid retrieval, grounding gate validation, and citation tracking.
+    Submits a query to the AI Tutor with zero application-level token or message limits.
+    Supports both course-grounded RAG and general-purpose LLM questions.
     """
-    # Use demo user by default if session token not provided
     demo_user = await AuthService.get_or_create_demo_user(db)
-    
+
     result = await GroundedTutorService.ask(
         db=db,
         course_id=req.course_id,
         query=req.message,
-        mode=req.mode,
-        language=req.language,
-        scope=req.scope,
+        mode=req.mode or "beginner",
+        language=req.language or "en",
+        scope=req.scope or "open",
         user_id=demo_user.id,
-        conversation_id=req.conversation_id
+        conversation_id=req.conversation_id,
+        response_depth=req.response_depth or "explanation",
+        conversation_history=req.conversation_history or []
     )
     return result
+
 
 @router.post("/source-question")
 async def ask_source_question(req: SourceQuestionRequest, db: AsyncSession = Depends(get_db)):

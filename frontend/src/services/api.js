@@ -110,22 +110,30 @@ export const api = {
     })).catch(() => enrichedResult);
   },
 
-  // Tutor (General-Purpose LLM + Contextual RAG + Dual Brief/Explanation Mode)
+  // Tutor (General-Purpose LLM + Contextual RAG + Dual Brief/Explanation Mode + Unlimited Conversation History)
   async askTutor(
     message,
     mode = 'beginner',
     courseId = 'OS_101',
     scopeLocation = null,
     responseDepth = 'explanation',
-    language = 'en'
+    language = 'en',
+    conversationHistory = [],
+    options = {}
   ) {
     const scopedDoc = scopeLocation?.document || '';
     const orchestrated = AIOrchestrator.orchestrateResponse({
       query: message,
       responseDepth,
       pedagogicalMode: mode,
-      scopedDocument: scopedDoc
+      scopedDocument: scopedDoc,
+      conversationHistory,
+      simulateProviderFailure: Boolean(options?.simulateProviderFailure)
     });
+
+    if (options?.simulateProviderFailure) {
+      return orchestrated;
+    }
 
     return resilientFetch(`${API_BASE}/tutor/ask`, {
       method: 'POST',
@@ -151,7 +159,8 @@ export const api = {
       citations: (res && res.citations && res.citations.length > 0) ? res.citations : orchestrated.citations,
       pipeline_trace: orchestrated.pipeline_trace,
       follow_up_questions: orchestrated.follow_up_questions,
-      recommended_next_action: orchestrated.recommended_next_action
+      recommended_next_action: orchestrated.recommended_next_action,
+      questions_asked_count: orchestrated.questions_asked_count
     }));
   },
 
