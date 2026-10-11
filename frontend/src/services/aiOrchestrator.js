@@ -7,9 +7,9 @@
  * Dual Response Strategy Generator (Brief mode & Deep Explanation mode)
  */
 
-import { ClientIntelligenceEngine } from './clientEngine';
-import { SmartExamEngine } from './smartExamEngine';
-import { ContentSanitizer } from './contentSanitizer';
+import { ClientIntelligenceEngine } from './clientEngine.js';
+import { SmartExamEngine } from './smartExamEngine.js';
+import { ContentSanitizer } from './contentSanitizer.js';
 
 export const INTENT_CLASSES = {
   GENERAL_QUESTION: 'GENERAL_QUESTION',

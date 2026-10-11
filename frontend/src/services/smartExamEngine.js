@@ -9,7 +9,7 @@
  * 5. Bayesian Updating & Active Learning Loop (User Feedback D → Bayesian Updating P(θ|D), θ' → Question Database q ∈ Q → Active Learning A(q), α_q, V_q ↔ Flagged Questions)
  */
 
-import { ClientIntelligenceEngine } from './clientEngine';
+import { ClientIntelligenceEngine } from './clientEngine.js';
 
 const STORAGE_KEY_BAYESIAN = 'edupath_bayesian_active_learning_v1';
 

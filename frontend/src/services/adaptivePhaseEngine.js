@@ -10,8 +10,8 @@
  * All 3 Phases Complete → Unlock GRAND QUIZ (15 Cross-Phase MCQs) → Final Cognitive Diagnosis Report
  */
 
-import { ClientIntelligenceEngine } from './clientEngine';
-import { ContentSanitizer } from './contentSanitizer';
+import { ClientIntelligenceEngine } from './clientEngine.js';
+import { ContentSanitizer } from './contentSanitizer.js';
 
 const STORAGE_KEY_SESSIONS = 'edupath_adaptive_3phase_sessions_v1';
 const STORAGE_KEY_ACTIVE_SESSION_ID = 'edupath_active_3phase_session_id_v1';

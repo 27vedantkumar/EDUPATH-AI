@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { ContentSanitizer } from '../../services/contentSanitizer';
 
 const PIPELINE_STAGES = [
   '1. File & Modality Detection',
@@ -100,7 +101,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
   };
 
   const runIngestionPipeline = async (targetFile = null, customPayload = null) => {
-    if (!currentCourse) return;
+    const courseId = currentCourse?.id || 'OS_101';
     try {
       setUploading(true);
       setError(null);
@@ -112,10 +113,10 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
       for (let step = 0; step < PIPELINE_STAGES.length; step++) {
         setActiveStageIdx(step);
         setProgress(Math.min(92, Math.round(((step + 1) / PIPELINE_STAGES.length) * 90)));
-        await new Promise((r) => setTimeout(r, 160));
+        await new Promise((r) => setTimeout(r, 140));
       }
 
-      const res = await api.uploadMaterial(currentCourse.id, targetFile, customPayload);
+      const res = await api.uploadMaterial(courseId, targetFile, customPayload);
       setProgress(100);
       setUploading(false);
       setIngestionResult(res);
@@ -124,7 +125,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
         onUploadComplete(res);
       }
     } catch (err) {
-      console.error('Upload failed:', err);
+      console.error('Upload error handled:', err);
       setError('Failed to process material. Please try again.');
       setUploading(false);
     }
@@ -192,7 +193,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-white">
-                    Successfully Ingested & Indexed: <span className="text-emerald-300 font-mono">{doc.filename}</span>
+                    Successfully Ingested & Indexed: <span className="text-emerald-300 font-mono">{ContentSanitizer.cleanDocumentTitle(doc.filename)}</span>
                   </div>
                   <div className="text-[11px] text-slate-300">
                     All 12 extraction stages completed • +50 Learner XP awarded • Immediately queryable in AI Tutor
@@ -277,23 +278,23 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300 leading-relaxed">
-                  {ingestionResult.learning_session.aiBoundaryRationale}
+                  {ingestionResult.learning_session.aiPlannerRationale || ingestionResult.learning_session.aiBoundaryRationale}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                  {(ingestionResult.learning_session.phases || []).map((ph) => (
+                  {(ingestionResult.learning_session.phases || []).map((ph, idx) => (
                     <div
-                      key={ph.id}
+                      key={ph.id || idx}
                       className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1"
                     >
                       <div className="flex items-center justify-between text-[10px] font-bold">
-                        <span className="text-indigo-400">PHASE {ph.phaseNumber}</span>
+                        <span className="text-indigo-400">PHASE {ph.number || ph.phaseNumber || idx + 1}</span>
                         <span className="text-slate-400">{ph.difficulty}</span>
                       </div>
                       <div className="text-[11px] font-semibold text-white truncate">
-                        {ph.title.replace(/^Phase \d+:\s*/, '')}
+                        {(ph.title || '').replace(/^Phase \d+:\s*/, '')}
                       </div>
                       <div className="text-[10px] text-emerald-400 font-mono">
-                        ⚡ Brief & 📖 Deep + {ph.mcqs?.length || 5} MCQs
+                        ⚡ Brief & 📖 Deep + {ph.quiz?.length || ph.mcqs?.length || 5} MCQs
                       </div>
                     </div>
                   ))}
@@ -313,15 +314,15 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
                     className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 space-y-1 text-xs"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-indigo-300 font-mono text-[11px]">
+                      <span className="font-bold text-indigo-300 text-[11px]">
                         {unit.location_label}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
                         Concept: {unit.concept}
                       </span>
                     </div>
-                    <p className="text-slate-300 text-[11px] leading-relaxed line-clamp-3 font-mono">
-                      {unit.content}
+                    <p className="text-slate-300 text-[11px] leading-relaxed line-clamp-3">
+                      {ContentSanitizer.cleanText(unit.content || '').replace(/[#*`]/g, '')}
                     </p>
                   </div>
                 ))}

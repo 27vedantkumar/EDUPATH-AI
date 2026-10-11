@@ -7,8 +7,8 @@
  * 3. ADAPTIVE LEARNING ENGINE (Hybrid BM25+Vector RAG, 6 Pedagogical Modes, Grounding Gate, SM-2, Planner)
  */
 
-import { MultimodalIngestionEngine } from './ingestionEngine';
-import { ContentSanitizer } from './contentSanitizer';
+import { MultimodalIngestionEngine } from './ingestionEngine.js';
+import { ContentSanitizer } from './contentSanitizer.js';
 
 export const COURSE_KNOWLEDGE_STORE = {
   course: {

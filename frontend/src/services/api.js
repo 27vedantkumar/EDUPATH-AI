@@ -1,6 +1,6 @@
-import { COURSE_KNOWLEDGE_STORE, ClientIntelligenceEngine } from './clientEngine';
-import { AIOrchestrator } from './aiOrchestrator';
-import { AdaptivePhaseEngine } from './adaptivePhaseEngine';
+import { COURSE_KNOWLEDGE_STORE, ClientIntelligenceEngine } from './clientEngine.js';
+import { AIOrchestrator } from './aiOrchestrator.js';
+import { AdaptivePhaseEngine } from './adaptivePhaseEngine.js';
 
 const API_BASE = '/api';
 
@@ -68,13 +68,23 @@ export const api = {
   },
 
   async uploadMaterial(courseId, file, customPayload = null) {
+    const safeCourseId = courseId || 'OS_101';
     // Always run client ingestion pipeline so local state & artifacts are enriched immediately
-    const clientResult = await ClientIntelligenceEngine.ingestMaterial(courseId, file, customPayload);
+    const clientResult = await ClientIntelligenceEngine.ingestMaterial(safeCourseId, file, customPayload);
     // Immediately synthesize AI-decided 3-Phase Adaptive Curriculum + Grand Quiz for the ingested document
-    const learningSession = AdaptivePhaseEngine.regenerateSession({
-      documentName: clientResult?.document?.filename || '',
-      customTopic: clientResult?.document?.topic || ''
-    });
+    let learningSession = null;
+    try {
+      learningSession = AdaptivePhaseEngine.regenerateSession({
+        documentName: clientResult?.document?.filename || '',
+        customTopic: clientResult?.document?.topic || ''
+      });
+    } catch (sessionErr) {
+      console.warn('AdaptivePhaseEngine session synthesis warning:', sessionErr);
+      try {
+        learningSession = AdaptivePhaseEngine.getSession();
+      } catch (_) {}
+    }
+
     const enrichedResult = {
       ...clientResult,
       learning_session: learningSession
@@ -87,7 +97,7 @@ export const api = {
       method: 'POST',
       body: (() => {
         const formData = new FormData();
-        formData.append('course_id', courseId);
+        formData.append('course_id', safeCourseId);
         formData.append('file', file);
         return formData;
       })()
@@ -97,7 +107,7 @@ export const api = {
       pipeline_summary: enrichedResult.pipeline_summary,
       document: enrichedResult.document,
       learning_session: enrichedResult.learning_session
-    }));
+    })).catch(() => enrichedResult);
   },
 
   // Tutor (General-Purpose LLM + Contextual RAG + Dual Brief/Explanation Mode)
