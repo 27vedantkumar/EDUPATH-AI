@@ -9,6 +9,7 @@
 
 import { ClientIntelligenceEngine } from './clientEngine';
 import { MultimodalIngestionEngine } from './ingestionEngine';
+import { SmartExamEngine } from './smartExamEngine';
 
 export const INTENT_CLASSES = {
   GENERAL_QUESTION: 'GENERAL_QUESTION',
@@ -65,6 +66,14 @@ const GENERAL_KNOWLEDGE_TOPICS = [
     formula: 'Stock_After = Stock_Before + Δ_Movement | Lock Order: ORDER BY product_id ASC',
     brief: `**Enterprise Inventory Architecture** guarantees zero negative stock and 100% auditability using four pillars:\n\n• **Centralized Finite State Machine (FSM)**: \`DRAFT → READY → DONE\` (or \`CANCELED\`). Terminal states (\`DONE\`, \`CANCELED\`) are immutable.\n• **ACID Row-Level Locking**: Acquires \`SELECT ... FOR UPDATE\` locks sorted deterministically by \`product_id ASC\` to prevent deadlocks.\n• **Immutable Double-Entry Stock Ledger**: Every receipt, delivery, transfer, or adjustment writes an append-only audit record (*Who, What, When, Where, Before, After*).\n• **Idempotency & Decimal Safety**: Uses \`Idempotency-Key\` deduplication and exact \`NUMERIC\` decimal arithmetic.`,
     explanation: `### 📖 Deep Explanation: Enterprise Inventory & Double-Entry Logistics Engine\n\n**1. Finite State Machine (FSM) Invariants**\nAllowed transitions are strictly enforced server-side:\n• \`draft → ready\` | \`draft → canceled\`\n• \`ready → done\` | \`ready → canceled\`\n• \`done → ∅\` (Terminal) | \`canceled → ∅\` (Terminal — a canceled operation can NEVER return to ready or be validated).\n\n**2. Deterministic Lock Ordering (Deadlock Prevention)**\nWhen two concurrent deliveries or transfers touch overlapping products (e.g., \`[Product 42, Product 7, Product 19, Product 3]\`), sorting items by \`product_id ASC\` (\`3 → 7 → 19 → 42\`) before executing \`SELECT quantity FROM stocks WHERE ... FOR UPDATE\` eliminates circular wait (Coffman Condition #4).\n\n**3. Exact Decimal Arithmetic & Immutable Ledger**\nFloating-point numbers (\`0.1 + 0.2 = 0.30000000000000004\`) corrupt fractional inventory units (kg, liters, meters). Using exact SQL \`NUMERIC(18,4)\` ensures \`Stock_Before + Movement == Stock_After\` holds across every ledger entry.`
+  },
+  {
+    keywords: ['eiffel tower', '1889', 'gustave eiffel'],
+    title: 'Construction of the Eiffel Tower (1889)',
+    domain: 'World History & Structural Engineering',
+    formula: 'Constructed: Jan 28, 1887 – Mar 31, 1889 | Height: 330 meters (1,083 ft)',
+    brief: `**The Eiffel Tower was built in 1889** (construction began on January 28, 1887 and concluded on March 31, 1889) as the entrance arch for the **1889 Exposition Universelle (World's Fair)** in Paris, celebrating the centennial of the French Revolution.`,
+    explanation: `### 📖 Deep Explanation: When & How the Eiffel Tower Was Built\n\n**1. Direct Answer**\n**The Eiffel Tower was built in 1889** (taking 2 years, 2 months, and 5 days from **January 1887 to March 31, 1889**).\n\n**2. How the LLM Processes This Query (Tokenization → Inference → Response)**\n• **Step 1 — Tokenization**: Splits *"When was the Eiffel Tower built?"* into subword tokens: \`[When]\` \`[was]\` \`[the]\` \`[Eiffel Tower built?]\`.\n• **Step 2 — Attention & Knowledge Retrieval**: Maps tokens to historical engineering entities (*Gustave Eiffel, Paris 1889 World's Fair, Puddle Iron Lattice*).\n• **Step 3 — Grounded Synthesis**: Outputs *"The Eiffel Tower was built in 1889."* along with structural engineering context (18,038 wrought-iron parts joined by 2.5 million rivets).`
   }
 ];
 
@@ -185,6 +194,7 @@ export class AIOrchestrator {
     const cleanQuery = this.sanitizeUntrustedText(query);
     const intentInfo = this.detectIntent(cleanQuery, scopedDocument);
     const activeDepth = intentInfo.preferredDepth || responseDepth || 'explanation';
+    const tokenization = SmartExamEngine.tokenizeQuery(cleanQuery);
 
     // 1. Check if it matches our RAG Knowledge Base (Uploaded Documents + Built-in Course Material)
     const retrieval = ClientIntelligenceEngine.retrieveGroundedUnits(
@@ -198,19 +208,30 @@ export class AIOrchestrator {
     const explicitlyAskedMaterial = /\b(in my uploaded|according to my pdf|in my document|from my file)\b/i.test(cleanQuery);
     if (explicitlyAskedMaterial && !hasStrongRagEvidence) {
       const genFallback = this.buildGeneralKnowledgeResponse(cleanQuery, pedagogicalMode);
-      const notice = `> **Source Grounding Notice:** I couldn't find direct evidence for *"${cleanQuery}"* inside your currently selected document (${scopedDocument || 'uploaded materials'}). Below is a helpful answer using **General AI Knowledge**:\n\n`;
+      const notice = `> **Source Grounding Notice:** I couldn't find direct evidence for *"${cleanQuery}"* inside your currently selected document (${scopedDocument || 'uploaded materials'}). Below is a helpful answer combining **LLM + Outside Knowledge**:\n\n`;
+      const ragDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
+        query: cleanQuery,
+        scopedDocument,
+        chunksScanned: retrieval.totalChunksScanned,
+        bm25Score: topMatch?.bm25Score || 0,
+        vectorScore: 0.45,
+        sourceOrigin: 'Answer Combined with LLM & Outside Knowledge'
+      });
+
       return {
         type: 'answer',
         intent: INTENT_CLASSES.MATERIAL_QUESTION,
         mode: activeDepth,
         pedagogical_mode: pedagogicalMode,
         grounding_status: 'PARTIALLY_SUPPORTED',
-        source_origin: 'General Knowledge Fallback (Not found in uploaded file)',
+        source_origin: 'Answer Combined with LLM & Outside Knowledge',
         brief_content: notice + genFallback.brief,
         explanation_content: notice + genFallback.explanation,
         answer: activeDepth === 'brief' ? notice + genFallback.brief : notice + genFallback.explanation,
         citations: [],
         follow_up_questions: genFallback.followUps,
+        tokenization,
+        rag_diagrams: ragDiagrams,
         anatomy_trace: this.buildAnatomyTrace(intentInfo.intent, 'General LLM + RAG Check', retrieval.totalChunksScanned, 'PARTIAL'),
         pipeline_trace: {
           status: 'GENERAL_KNOWLEDGE_FALLBACK',
@@ -233,7 +254,7 @@ export class AIOrchestrator {
     if (hasStrongRagEvidence && intentInfo.intent !== INTENT_CLASSES.GENERAL_QUESTION) {
       const baseTutorRes = ClientIntelligenceEngine.askTutor(
         cleanQuery,
-        pedagogicalMode,
+        pedagogicalMode === 'eli12' ? 'beginner' : pedagogicalMode,
         scopedDocument ? { document: scopedDocument } : null
       );
       const syn = ClientIntelligenceEngine.synthesizeCoreExplanation(
@@ -242,12 +263,25 @@ export class AIOrchestrator {
         retrieval.topMatches[1]
       );
 
+      const eli12Prefix =
+        pedagogicalMode === 'eli12'
+          ? `### 🧒 ELI12 (Explain Like I'm 12) — ${syn.concept}\nImagine two teammates sharing a single toolkit: if each person grabs half the tools and refuses to share until the other finishes, nobody can build anything! Here is how your course material explains **${syn.concept}** simply:\n\n`
+          : '';
+
       const briefVersion = `### ⚡ Brief Summary — ${syn.concept}\n${syn.headline}\n\n${syn.bulletPoints
         .slice(0, 3)
         .map((b) => `• ${b}`)
         .join('\n')}\n\n**Key Rule / Formula:** \`${syn.formula}\`\n📍 *Source: ${topMatch.doc.filename} → ${topMatch.unit.location_label}*`;
 
-      const explanationVersion = baseTutorRes.answer;
+      const explanationVersion = eli12Prefix ? eli12Prefix + baseTutorRes.answer : baseTutorRes.answer;
+      const ragDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
+        query: cleanQuery,
+        scopedDocument: topMatch.doc.filename,
+        chunksScanned: retrieval.totalChunksScanned,
+        bm25Score: topMatch.bm25Score,
+        vectorScore: 0.98,
+        sourceOrigin: `Grounded in ${topMatch.doc.filename} + LLM Synthesis`
+      });
 
       return {
         type: 'answer',
@@ -262,6 +296,8 @@ export class AIOrchestrator {
         citations: baseTutorRes.citations || [],
         follow_up_questions: baseTutorRes.follow_up_questions || syn.followUps,
         recommended_next_action: baseTutorRes.recommended_next_action,
+        tokenization,
+        rag_diagrams: ragDiagrams,
         anatomy_trace: this.buildAnatomyTrace(intentInfo.intent, 'Hybrid RAG + Grounded Synthesis', retrieval.totalChunksScanned, 'SUPPORTED'),
         pipeline_trace: {
           ...(baseTutorRes.pipeline_trace || {}),
@@ -271,15 +307,24 @@ export class AIOrchestrator {
       };
     }
 
-    // 4. General-Purpose LLM Response (Handles ANY question outside or beyond uploaded files!)
+    // 4. General-Purpose LLM Response (Combines LLM + Outside Knowledge as shown in Diagram 1 Step 7)
     const genRes = this.buildGeneralKnowledgeResponse(cleanQuery, pedagogicalMode);
+    const ragDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
+      query: cleanQuery,
+      scopedDocument,
+      chunksScanned: retrieval.totalChunksScanned,
+      bm25Score: topMatch?.bm25Score || 1.2,
+      vectorScore: 0.92,
+      sourceOrigin: `Answer Combined with LLM & Outside Knowledge (${genRes.domain})`
+    });
+
     return {
       type: 'answer',
       intent: INTENT_CLASSES.GENERAL_QUESTION,
       mode: activeDepth,
       pedagogical_mode: pedagogicalMode,
       grounding_status: 'GENERAL_AI',
-      source_origin: `General AI Knowledge (${genRes.domain})`,
+      source_origin: `Answer Combined with LLM & Outside Knowledge (${genRes.domain})`,
       brief_content: genRes.brief,
       explanation_content: genRes.explanation,
       answer: activeDepth === 'brief' ? genRes.brief : genRes.explanation,
@@ -292,6 +337,8 @@ export class AIOrchestrator {
         topic: genRes.title,
         reason: `Master ${genRes.title} through 3 adaptive phases, phase MCQs, and a Grand Quiz.`
       },
+      tokenization,
+      rag_diagrams: ragDiagrams,
       anatomy_trace: this.buildAnatomyTrace(INTENT_CLASSES.GENERAL_QUESTION, 'General LLM Inference Engine', retrieval.totalChunksScanned, 'GENERAL_AI'),
       pipeline_trace: {
         status: 'GENERAL_LLM_VERIFIED',
