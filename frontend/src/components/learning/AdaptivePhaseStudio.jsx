@@ -7,11 +7,9 @@ import {
   Sparkles,
   BookOpen,
   Zap,
-  Award,
   ArrowRight,
   RotateCcw,
   HelpCircle,
-  ChevronRight,
   FileText,
   Trophy,
   Brain,
@@ -19,6 +17,8 @@ import {
   Clock
 } from 'lucide-react';
 import { AdaptivePhaseEngine } from '../../services/adaptivePhaseEngine';
+import { ContentSanitizer } from '../../services/contentSanitizer';
+import { EducationalContentRenderer } from '../common/EducationalContentRenderer';
 
 export const AdaptivePhaseStudio = ({
   documentName = '',
@@ -30,6 +30,7 @@ export const AdaptivePhaseStudio = ({
   const [activeTab, setActiveTab] = useState('phase_1'); // 'phase_1' | 'phase_2' | 'phase_3' | 'grand_quiz'
   const [viewMode, setViewMode] = useState('study'); // 'study' | 'quiz' | 'phase_result' | 'grand_intro' | 'grand_quiz' | 'grand_report'
   const [responseDepth, setResponseDepth] = useState('explanation'); // 'brief' | 'explanation'
+  const [showQuickCheckAnswer, setShowQuickCheckAnswer] = useState(false);
 
   // Active MCQ Quiz state
   const [currentQIndex, setCurrentQIndex] = useState(0);
@@ -44,6 +45,7 @@ export const AdaptivePhaseStudio = ({
       const targetP = loaded.currentPhaseNumber || 1;
       setActiveTab(`phase_${targetP}`);
       setViewMode('study');
+      setShowQuickCheckAnswer(false);
     }
   }, [documentName, customTopic]);
 
@@ -99,7 +101,6 @@ export const AdaptivePhaseStudio = ({
       setSelectedOption(null);
       setIsSubmitted(false);
     } else {
-      // Finish Phase Quiz or Grand Quiz
       if (viewMode === 'grand_quiz') {
         const res = AdaptivePhaseEngine.evaluateGrandQuiz(session.id, updatedAnswers);
         if (res && res.session) {
@@ -128,32 +129,64 @@ export const AdaptivePhaseStudio = ({
     setSession({ ...fresh });
     setActiveTab('phase_1');
     setViewMode('study');
+    setShowQuickCheckAnswer(false);
   };
 
   const allPhasesDone = session.phases.every((p) => p.completionStatus === 'COMPLETED');
+  const cleanSourceTitle = ContentSanitizer.cleanDocumentTitle(session.sourceDocument);
+
+  const flowSteps = [
+    { id: 'ingested', label: 'Material Ingested', done: true },
+    { id: 'understood', label: 'AI Understands', done: true },
+    { id: 'plan', label: 'Learning Plan', done: true },
+    {
+      id: 'p1',
+      label: 'Phase 1',
+      done: session.phases[0]?.completionStatus === 'COMPLETED',
+      active: activeTab === 'phase_1'
+    },
+    {
+      id: 'p2',
+      label: 'Phase 2',
+      done: session.phases[1]?.completionStatus === 'COMPLETED',
+      active: activeTab === 'phase_2'
+    },
+    {
+      id: 'p3',
+      label: 'Phase 3',
+      done: session.phases[2]?.completionStatus === 'COMPLETED',
+      active: activeTab === 'phase_3'
+    },
+    {
+      id: 'gq',
+      label: 'Grand Quiz',
+      done: Boolean(session.grandQuiz?.completed),
+      active: activeTab === 'grand_quiz'
+    }
+  ];
 
   return (
-    <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-5 animate-in fade-in">
+    <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6 animate-in fade-in">
       {/* Top Header & AI Curriculum Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-              <Brain className="w-3 h-3" /> AI-Decided 3-Phase Adaptive Learning
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
+              <Brain className="w-3.5 h-3.5" /> 3-Phase Adaptive Learning
             </span>
-            <span className="text-[11px] text-slate-400 font-mono">
-              Source: {session.sourceDocument}
+            <span className="text-xs text-slate-400 italic">
+              Source: {cleanSourceTitle}
             </span>
           </div>
           <h2 className="text-base font-bold text-white">{session.title}</h2>
-          <p className="text-[11px] text-slate-400">{session.aiPlannerRationale}</p>
+          <p className="text-sm text-slate-400 leading-relaxed">{session.aiPlannerRationale}</p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleResetCurriculum}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-colors"
-            title="Reset 3-Phase Progress"
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            title="Regenerate Clean 3-Phase Curriculum"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -161,7 +194,7 @@ export const AdaptivePhaseStudio = ({
           {onCloseStudio && (
             <button
               onClick={onCloseStudio}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
             >
               Back to Chat
             </button>
@@ -169,19 +202,38 @@ export const AdaptivePhaseStudio = ({
         </div>
       </div>
 
-      {/* Adaptive Learning Journey Progress Bar (Phase 1 ─── Phase 2 ─── Phase 3 ─── Grand Quiz) */}
-      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/90">
-        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-3">
-          <span className="font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5 text-indigo-400" />
-            Adaptive Learning Journey
-          </span>
-          <span className="font-mono text-indigo-300">
-            {session.phases.filter((p) => p.completionStatus === 'COMPLETED').length} / 3 Phases Completed
+      {/* Visual Learning Flow Pipeline (Section 21) */}
+      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/90 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            {flowSteps.map((step, index) => (
+              <React.Fragment key={step.id}>
+                <span
+                  className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5 transition-colors ${
+                    step.active
+                      ? 'bg-indigo-600 text-white font-semibold shadow-sm'
+                      : step.done
+                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-slate-900 text-slate-400 border border-slate-800'
+                  }`}
+                >
+                  {step.done && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                  <span>{step.label}</span>
+                </span>
+                {index < flowSteps.length - 1 && (
+                  <span className="text-slate-600 font-bold">→</span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+
+          <span className="text-xs font-semibold text-indigo-300">
+            {session.phases.filter((p) => p.completionStatus === 'COMPLETED').length} of 3 Phases Completed
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+        {/* Phase & Grand Quiz Selector Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           {session.phases.map((p) => {
             const isCompleted = p.completionStatus === 'COMPLETED';
             const isCurrent = activeTab === `phase_${p.number}`;
@@ -191,8 +243,9 @@ export const AdaptivePhaseStudio = ({
                 onClick={() => {
                   setActiveTab(`phase_${p.number}`);
                   setViewMode('study');
+                  setShowQuickCheckAnswer(false);
                 }}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`p-3.5 rounded-xl border text-left transition-all ${
                   isCurrent
                     ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md'
                     : isCompleted
@@ -205,22 +258,22 @@ export const AdaptivePhaseStudio = ({
                     {isCompleted ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                     ) : (
-                      <span className="w-4 h-4 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[10px] font-mono">
+                      <span className="w-4 h-4 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-xs">
                         {p.number}
                       </span>
                     )}
                     <span>Phase {p.number}</span>
                   </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950/60 text-slate-400">
+                  <span className="text-xs px-2 py-0.5 rounded bg-slate-950/60 text-slate-400">
                     {p.difficulty}
                   </span>
                 </div>
-                <div className="text-[11px] font-semibold mt-1 truncate">{p.patternLabel}</div>
-                <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                <div className="text-sm font-semibold mt-1.5 truncate">{p.patternLabel}</div>
+                <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
                   <span>{p.quiz?.length || 5} MCQs</span>
                   {p.performance && (
-                    <span className="font-mono text-emerald-400 font-bold">
-                      Score: {p.performance.score}/{p.performance.total} ({p.performance.accuracy}%)
+                    <span className="text-emerald-400 font-semibold">
+                      {p.performance.score}/{p.performance.total} ({p.performance.accuracy}%)
                     </span>
                   )}
                 </div>
@@ -238,7 +291,7 @@ export const AdaptivePhaseStudio = ({
                 setViewMode('grand_intro');
               }
             }}
-            className={`p-3 rounded-xl border text-left transition-all ${
+            className={`p-3.5 rounded-xl border text-left transition-all ${
               activeTab === 'grand_quiz'
                 ? 'bg-amber-500/20 border-amber-400 text-white shadow-md'
                 : allPhasesDone || session.grandQuiz?.unlocked
@@ -255,13 +308,13 @@ export const AdaptivePhaseStudio = ({
                 )}
                 <span>Grand Quiz</span>
               </span>
-              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              <Trophy className="w-4 h-4 text-amber-400" />
             </div>
-            <div className="text-[11px] font-semibold mt-1 truncate">Covers All 3 Phases</div>
-            <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-              <span>{session.grandQuiz?.totalQuestions || 15} Fresh MCQs</span>
+            <div className="text-sm font-semibold mt-1.5 truncate">All 3 Phases</div>
+            <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+              <span>{session.grandQuiz?.totalQuestions || 15} MCQs</span>
               {session.grandQuiz?.result && (
-                <span className="font-mono text-amber-300 font-bold">
+                <span className="text-amber-300 font-semibold">
                   {session.grandQuiz.result.percentage}%
                 </span>
               )}
@@ -270,87 +323,120 @@ export const AdaptivePhaseStudio = ({
         </div>
       </div>
 
-      {/* VIEW 1: PHASE STUDY MODE (With ⚡ Brief vs 📖 Explanation Toggle) */}
+      {/* VIEW 1: PHASE STUDY MODE (With Brief vs Deep Explanation Toggle) */}
       {viewMode === 'study' && activePhase && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold text-[10px]">
-                  PHASE {activePhase.number} • {activePhase.difficulty.toUpperCase()}
+        <div className="space-y-5">
+          {/* Phase Header Card */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5 text-xs">
+                <span className="px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">
+                  Phase {activePhase.number}: {activePhase.patternLabel}
                 </span>
-                <span className="text-slate-400 flex items-center gap-1 text-[11px]">
-                  <Clock className="w-3 h-3" /> {activePhase.estimatedLearningTime}
+                <span className="text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> {activePhase.estimatedLearningTime}
                 </span>
               </div>
               <h3 className="text-sm font-bold text-white">{activePhase.title}</h3>
-              <p className="text-xs text-slate-300">
-                <strong className="text-indigo-300">Objective:</strong> {activePhase.objective}
+              <p className="text-sm text-slate-300 leading-relaxed">
+                <strong className="text-indigo-300">Learning Goal:</strong> {activePhase.objective}
               </p>
             </div>
 
-            {/* ⚡ Brief vs 📖 Explanation Mode Toggle */}
+            {/* Brief vs Deep Explanation Mode Toggle */}
             <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800 shrink-0">
               <button
                 onClick={() => setResponseDepth('brief')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   responseDepth === 'brief'
                     ? 'bg-indigo-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span>⚡ Brief</span>
+                <span>Brief</span>
               </button>
               <button
                 onClick={() => setResponseDepth('explanation')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   responseDepth === 'explanation'
                     ? 'bg-indigo-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>📖 Explanation</span>
+                <span>Deep Explanation</span>
               </button>
             </div>
           </div>
 
           {/* Phase Concepts & Prerequisites Badges */}
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-slate-400 font-semibold">Phase Concepts:</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-400 font-semibold">Key Concepts:</span>
             {activePhase.concepts.map((c, idx) => (
               <span
                 key={idx}
-                className="px-2.5 py-1 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-medium"
+                className="px-2.5 py-1 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 font-medium"
               >
-                {c}
+                {ContentSanitizer.cleanText(c)}
               </span>
             ))}
-            <span className="text-slate-500 mx-1">|</span>
-            <span className="text-slate-400 font-semibold">Prerequisites:</span>
+            <span className="text-slate-600 mx-1">•</span>
+            <span className="text-slate-400 font-semibold">Builds On:</span>
             {activePhase.prerequisites.map((pre, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300"
+                className="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-300"
               >
-                {pre}
+                {ContentSanitizer.cleanText(pre)}
               </span>
             ))}
           </div>
 
-          {/* Grounded Teaching Content (Brief or Detailed Explanation) */}
-          <div className="p-5 rounded-2xl bg-slate-950/90 border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
-            {responseDepth === 'brief' ? activePhase.briefContent : activePhase.explanationContent}
+          {/* Clean Teacher-Grade Lesson Body (Single Base Font Size, No Raw Markdown/PDF Artifacts) */}
+          <div className="p-6 rounded-2xl bg-slate-950/90 border border-slate-800">
+            <EducationalContentRenderer
+              content={
+                responseDepth === 'brief'
+                  ? activePhase.briefContent
+                  : activePhase.explanationContent
+              }
+            />
           </div>
 
+          {/* Interactive Quick Check Block (Section 18) */}
+          {activePhase.quickCheck && (
+            <div className="p-4 rounded-xl bg-indigo-950/25 border border-indigo-500/30 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold text-indigo-300 flex items-center gap-1.5">
+                  <HelpCircle className="w-4 h-4" /> Quick Concept Check
+                </span>
+                <button
+                  onClick={() => setShowQuickCheckAnswer((prev) => !prev)}
+                  className="text-xs font-semibold text-indigo-300 hover:text-indigo-200 underline"
+                >
+                  {showQuickCheckAnswer ? 'Hide Answer' : 'Reveal Answer'}
+                </button>
+              </div>
+              <p className="text-sm text-slate-200 leading-relaxed">
+                {activePhase.quickCheck.question}
+              </p>
+              {showQuickCheckAnswer && (
+                <div className="p-3 rounded-lg bg-slate-900/90 border border-indigo-500/20 text-sm text-emerald-300 leading-relaxed">
+                  <strong className="text-emerald-400">Answer: </strong>
+                  {activePhase.quickCheck.answer}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Source References Footer + Start Phase MCQ Quiz CTA */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800">
-            <div className="text-[11px] text-slate-400 space-y-0.5">
-              <span className="font-semibold text-slate-300 block">Grounded Source References:</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-800">
+            <div className="text-xs text-slate-400 space-y-1">
               {activePhase.sourceReferences.map((ref, idx) => (
-                <div key={idx} className="font-mono text-indigo-300 flex items-center gap-1">
-                  <FileText className="w-3 h-3" /> {ref}
+                <div key={idx} className="italic text-slate-400 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>{ContentSanitizer.formatSourceReference(ref)}</span>
                 </div>
               ))}
             </div>
@@ -359,16 +445,16 @@ export const AdaptivePhaseStudio = ({
               {activePhase.performance && (
                 <button
                   onClick={() => setViewMode('phase_result')}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700"
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700"
                 >
                   View Last Score ({activePhase.performance.accuracy}%)
                 </button>
               )}
               <button
                 onClick={() => startPhaseQuiz(activePhase.number)}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg flex items-center gap-2 transition-all"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg flex items-center gap-2 transition-all"
               >
-                <span>Take Phase {activePhase.number} MCQ Quiz ({activePhase.quiz.length} Questions)</span>
+                <span>Start Phase {activePhase.number} Quiz ({activePhase.quiz.length} MCQs)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -378,42 +464,43 @@ export const AdaptivePhaseStudio = ({
 
       {/* VIEW 2: INTERACTIVE MCQ QUIZ CARD (Phase Quiz OR Grand Quiz) */}
       {(viewMode === 'quiz' || viewMode === 'grand_quiz') && currentQuestion && (
-        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 font-mono font-bold text-xs">
+        <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 font-bold text-xs">
                 {viewMode === 'grand_quiz'
-                  ? `🏆 GRAND QUIZ • Question ${currentQIndex + 1} / ${activeQuestions.length}`
-                  : `Phase ${activePhase.number} Quiz • Question ${currentQIndex + 1} / ${activeQuestions.length}`}
+                  ? `Grand Quiz — Question ${currentQIndex + 1} of ${activeQuestions.length}`
+                  : `Phase ${activePhase.number} Quiz — Question ${currentQIndex + 1} of ${activeQuestions.length}`}
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-mono">
-                Concept: {currentQuestion.concept}
+              <span className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs">
+                Concept: {ContentSanitizer.cleanText(currentQuestion.concept)}
               </span>
-              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 text-[10px] font-mono">
+              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-amber-300 text-xs">
                 {currentQuestion.difficulty}
               </span>
             </div>
 
             <button
               onClick={() => setViewMode('study')}
-              className="text-xs text-slate-400 hover:text-slate-200"
+              className="text-xs font-semibold text-slate-400 hover:text-slate-200"
             >
-              Return to Study Notes
+              Return to Lesson
             </button>
           </div>
 
           {/* Question Prompt */}
           <div className="text-sm font-bold text-white leading-relaxed">
-            {currentQuestion.question}
+            {ContentSanitizer.cleanText(currentQuestion.question)}
           </div>
 
-          {/* 4 MCQ Options (A, B, C, D) — Answer hidden until submitted! */}
+          {/* 4 MCQ Options (A, B, C, D) */}
           <div className="space-y-2.5">
             {currentQuestion.options.map((opt) => {
               const isSelected = selectedOption === opt.id;
               const isCorrectOption = opt.id === currentQuestion.correctAnswer;
 
-              let optionStyle = 'bg-slate-900/90 border-slate-800 text-slate-200 hover:border-slate-700';
+              let optionStyle =
+                'bg-slate-900/90 border-slate-800 text-slate-200 hover:border-slate-700';
               if (!isSubmitted && isSelected) {
                 optionStyle = 'bg-indigo-600/25 border-indigo-500 text-white shadow-sm';
               } else if (isSubmitted) {
@@ -431,13 +518,15 @@ export const AdaptivePhaseStudio = ({
                   key={opt.id}
                   disabled={isSubmitted}
                   onClick={() => setSelectedOption(opt.id)}
-                  className={`w-full p-3.5 rounded-xl border text-left text-xs flex items-center justify-between transition-all ${optionStyle}`}
+                  className={`w-full p-3.5 rounded-xl border text-left text-sm flex items-center justify-between transition-all ${optionStyle}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center font-mono font-bold text-[11px] shrink-0">
+                    <span className="w-6 h-6 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
                       {opt.id}
                     </span>
-                    <span className="font-medium leading-relaxed">{opt.text}</span>
+                    <span className="leading-relaxed">
+                      {ContentSanitizer.cleanText(opt.text)}
+                    </span>
                   </div>
                   {isSubmitted && isCorrectOption && (
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 ml-2" />
@@ -450,28 +539,35 @@ export const AdaptivePhaseStudio = ({
             })}
           </div>
 
-          {/* Immediate Feedback Box (Shown ONLY after Submit Answer is clicked) */}
+          {/* Immediate Feedback Box */}
           {isSubmitted && (
             <div
-              className={`p-4 rounded-xl border text-xs space-y-1.5 ${
+              className={`p-4 rounded-xl border text-sm space-y-2 ${
                 selectedOption === currentQuestion.correctAnswer
                   ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
                   : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
               }`}
             >
-              <div className="font-bold flex items-center justify-between">
+              <div className="font-bold flex flex-wrap items-center justify-between gap-2">
                 <span>
                   {selectedOption === currentQuestion.correctAnswer
-                    ? '✓ Correct Answer!'
-                    : `✗ Incorrect — Correct Option: ${currentQuestion.correctAnswer}`}
+                    ? 'Correct Answer'
+                    : `Incorrect — Correct Option: ${currentQuestion.correctAnswer}`}
                 </span>
-                <span className="font-mono text-[10px] opacity-80">
-                  Source: {currentQuestion.sourceReference}
+                <span className="text-xs italic opacity-80">
+                  {ContentSanitizer.formatSourceReference(currentQuestion.sourceReference)}
                 </span>
               </div>
               <p className="text-slate-200 leading-relaxed">
-                <strong>Explanation:</strong> {currentQuestion.explanation}
+                <strong>Why:</strong> {ContentSanitizer.cleanText(currentQuestion.explanation)}
               </p>
+              {selectedOption !== currentQuestion.correctAnswer &&
+                currentQuestion.remediationNote && (
+                  <p className="text-amber-300 leading-relaxed pt-1 border-t border-rose-500/20">
+                    <strong>You may want to revisit this concept:</strong>{' '}
+                    {ContentSanitizer.cleanText(currentQuestion.remediationNote)}
+                  </p>
+                )}
             </div>
           )}
 
@@ -481,14 +577,14 @@ export const AdaptivePhaseStudio = ({
               <button
                 onClick={handleSubmitSingleQuestion}
                 disabled={!selectedOption}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold shadow-md transition-all"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold shadow-md transition-all"
               >
                 Submit Answer
               </button>
             ) : (
               <button
                 onClick={handleNextQuestion}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md flex items-center gap-2 transition-all"
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-md flex items-center gap-2 transition-all"
               >
                 <span>
                   {currentQIndex < activeQuestions.length - 1
@@ -504,71 +600,98 @@ export const AdaptivePhaseStudio = ({
         </div>
       )}
 
-      {/* VIEW 3: PHASE EVALUATION SUMMARY (Score, Strong Concepts, Weak Concepts, Continue/Retry) */}
+      {/* VIEW 3: PHASE EVALUATION SUMMARY + TARGETED REMEDIATION (Section 17) */}
       {viewMode === 'phase_result' && activePhase?.performance && (
-        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
+        <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
             <div>
-              <span className="text-[10px] font-mono uppercase text-indigo-400 font-bold">
-                Phase {activePhase.number} Diagnostic Evaluation Complete
+              <span className="text-xs uppercase text-indigo-400 font-bold">
+                Phase {activePhase.number} Evaluation Complete
               </span>
               <h3 className="text-base font-bold text-white mt-0.5">{activePhase.title}</h3>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-right">
-                <span className="text-[10px] text-slate-400 block">Phase Score</span>
-                <span className="text-base font-bold text-indigo-300 font-mono">
-                  {activePhase.performance.score} / {activePhase.performance.total} ({activePhase.performance.accuracy}%)
-                </span>
-              </div>
+            <div className="px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-right">
+              <span className="text-xs text-slate-400 block">Phase Score</span>
+              <span className="text-base font-bold text-indigo-300">
+                {activePhase.performance.score} / {activePhase.performance.total} ({activePhase.performance.accuracy}%)
+              </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-2">
-              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" /> Strong Concepts Mastered
+              <span className="text-sm font-bold text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" /> Concepts Mastered
               </span>
               {activePhase.performance.strongConcepts.length > 0 ? (
-                <ul className="space-y-1 text-xs text-slate-200">
+                <ul className="space-y-1.5 text-sm text-slate-200">
                   {activePhase.performance.strongConcepts.map((c, i) => (
-                    <li key={i} className="flex items-center gap-1.5">
-                      <span className="text-emerald-400">✓</span> {c}
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="text-emerald-400">✓</span> {ContentSanitizer.cleanText(c)}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-slate-400">Review the phase material to build strong concept mastery.</p>
+                <p className="text-sm text-slate-400">
+                  Review the phase lesson to strengthen concept mastery before advancing.
+                </p>
               )}
             </div>
 
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2">
-              <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4" /> Needs Review / Reinforcement
+              <span className="text-sm font-bold text-amber-400 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" /> You May Want to Revisit This Concept
               </span>
               {activePhase.performance.weakConcepts.length > 0 ? (
-                <ul className="space-y-1 text-xs text-slate-200">
+                <ul className="space-y-2 text-sm text-slate-200">
                   {activePhase.performance.weakConcepts.map((c, i) => (
                     <li key={i} className="flex items-center justify-between gap-2">
-                      <span>⚠ {c}</span>
+                      <span>• {ContentSanitizer.cleanText(c)}</span>
                       {onAskTutorAboutConcept && (
                         <button
                           onClick={() => onAskTutorAboutConcept(c)}
-                          className="text-[10px] text-indigo-300 hover:underline font-semibold"
+                          className="text-xs text-indigo-300 hover:underline font-semibold shrink-0"
                         >
-                          Ask AI to Reinforce →
+                          Ask Tutor →
                         </button>
                       )}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-emerald-300">Zero weak concepts detected in Phase {activePhase.number}!</p>
+                <p className="text-sm text-emerald-300">
+                  All concepts in Phase {activePhase.number} were answered accurately.
+                </p>
               )}
             </div>
           </div>
 
-          {/* Action Buttons: Retry Phase | Review Weak Topics | Continue */}
+          {/* Targeted Concept Remediation Notes (Section 17) */}
+          {activePhase.performance.remediationItems &&
+            activePhase.performance.remediationItems.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-900/90 border border-amber-500/30 space-y-3">
+                <div className="text-sm font-bold text-amber-300">
+                  Targeted Concept Review Before Moving Forward
+                </div>
+                <div className="space-y-2.5">
+                  {activePhase.performance.remediationItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-sm space-y-1"
+                    >
+                      <div className="font-semibold text-white">
+                        {ContentSanitizer.cleanText(item.concept)}
+                      </div>
+                      <p className="text-slate-300 leading-relaxed">
+                        {ContentSanitizer.cleanText(item.note)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          {/* Action Buttons */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
             <div className="flex flex-wrap gap-2">
               <button
@@ -585,7 +708,7 @@ export const AdaptivePhaseStudio = ({
                 }}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
               >
-                Review Phase Notes
+                Review Lesson in Deep Mode
               </button>
             </div>
 
@@ -594,8 +717,9 @@ export const AdaptivePhaseStudio = ({
                 onClick={() => {
                   setActiveTab(`phase_${activePhase.number + 1}`);
                   setViewMode('study');
+                  setShowQuickCheckAnswer(false);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg flex items-center gap-2"
               >
                 <span>Continue to Phase {activePhase.number + 1}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -606,7 +730,7 @@ export const AdaptivePhaseStudio = ({
                   setActiveTab('grand_quiz');
                   setViewMode('grand_intro');
                 }}
-                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-lg flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold shadow-lg flex items-center gap-2"
               >
                 <Trophy className="w-4 h-4" />
                 <span>Proceed to Grand Quiz (All 3 Phases)</span>
@@ -622,53 +746,51 @@ export const AdaptivePhaseStudio = ({
           <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto">
             <Trophy className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-bold text-white">
-            🏆 Grand Mastery Quiz — Comprehensive Cross-Phase Assessment
+          <h3 className="text-base font-bold text-white">
+            Grand Mastery Quiz — Comprehensive Cross-Phase Assessment
           </h3>
-          <p className="text-xs text-slate-300 max-w-xl mx-auto leading-relaxed">
-            Covers <strong>Phase 1 (Foundations)</strong> + <strong>Phase 2 (Mechanisms & Relationships)</strong> + <strong>Phase 3 (Advanced Applications)</strong> with <strong>{session.grandQuiz?.totalQuestions || 15} fresh MCQs</strong> across Recall, Conceptual, and Application levels.
+          <p className="text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+            Tests your understanding across <strong>Phase 1 (Foundation)</strong>,{' '}
+            <strong>Phase 2 (Application)</strong>, and <strong>Phase 3 (Mastery)</strong> with{' '}
+            <strong>{session.grandQuiz?.totalQuestions || 15} multiple-choice questions</strong>.
           </p>
-          <div className="flex justify-center gap-4 text-xs font-mono text-slate-400">
-            <span>• Questions: {session.grandQuiz?.totalQuestions || 15} MCQs</span>
-            <span>• Difficulty: Mixed (Easy / Medium / Hard)</span>
-            <span>• Format: Strictly Multiple-Choice</span>
-          </div>
           <div className="pt-2 flex justify-center gap-3">
             <button
               onClick={startGrandQuiz}
-              className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-xl flex items-center gap-2 transition-all"
+              className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold shadow-xl flex items-center gap-2 transition-all"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Start Grand Quiz Now</span>
+              <span>Start Grand Quiz</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* VIEW 5: FINAL LEARNING ANALYSIS REPORT (After Grand Quiz Completion) */}
+      {/* VIEW 5: FINAL LEARNING ANALYSIS REPORT */}
       {viewMode === 'grand_report' && session.grandQuiz?.result && (
-        <div className="p-5 rounded-2xl bg-slate-950 border border-emerald-500/40 space-y-5">
+        <div className="p-6 rounded-2xl bg-slate-950 border border-emerald-500/40 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
             <div className="space-y-1">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
-                🏆 Learning Complete • Final Cognitive Diagnosis Report
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Final Learning Diagnosis Report
               </span>
               <h3 className="text-base font-bold text-white">{session.title}</h3>
-              <p className="text-xs text-slate-400">
-                Overall Mastery Classification: <strong className="text-emerald-400">{session.grandQuiz.result.grade}</strong>
+              <p className="text-sm text-slate-400">
+                Overall Mastery Standing:{' '}
+                <strong className="text-emerald-400">{session.grandQuiz.result.grade}</strong>
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-center">
-                <span className="text-[10px] text-slate-400 block uppercase">Final Grand Score</span>
-                <span className="text-lg font-bold text-emerald-300 font-mono">
+                <span className="text-xs text-slate-400 block">Final Grand Score</span>
+                <span className="text-base font-bold text-emerald-300">
                   {session.grandQuiz.result.score} / {session.grandQuiz.result.total} ({session.grandQuiz.result.percentage}%)
                 </span>
               </div>
               <button
                 onClick={startGrandQuiz}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1"
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
               >
                 <RotateCcw className="w-3.5 h-3.5" /> Retake Grand Quiz
               </button>
@@ -678,69 +800,79 @@ export const AdaptivePhaseStudio = ({
           {/* Phase-Wise Performance Breakdown */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {session.grandQuiz.result.phaseWisePerformance.map((pw) => (
-              <div key={pw.phase} className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-bold text-white">
+              <div
+                key={pw.phase}
+                className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2"
+              >
+                <div className="flex items-center justify-between text-sm font-bold text-white">
                   <span>Phase {pw.phase}</span>
-                  <span className="font-mono text-indigo-300">
+                  <span className="text-indigo-300">
                     {pw.score}/{pw.total} ({pw.accuracy}%)
                   </span>
                 </div>
                 <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full bg-indigo-500"
-                    style={{ width: `${pw.accuracy}%` }}
-                  />
+                  <div className="h-full bg-indigo-500" style={{ width: `${pw.accuracy}%` }} />
                 </div>
-                <div className="text-[10px] text-slate-400 truncate">{pw.title}</div>
+                <div className="text-xs text-slate-400 truncate">{pw.title}</div>
               </div>
             ))}
           </div>
 
           {/* Strongest vs Weakest Concepts */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
-              <span className="text-xs font-bold text-emerald-400 block">
-                ✓ Strongest Mastered Concepts
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+              <span className="text-sm font-bold text-emerald-400 block">
+                Strongest Mastered Concepts
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {(session.grandQuiz.result.strongestConcepts.length > 0
                   ? session.grandQuiz.result.strongestConcepts
-                  : ['Coffman Conditions', 'Safe Sequences']
+                  : ['Core Foundations']
                 ).map((c, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 text-[11px]">
-                    ✓ {c}
+                  <span
+                    key={i}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-200 text-xs"
+                  >
+                    ✓ {ContentSanitizer.cleanText(c)}
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
-              <span className="text-xs font-bold text-amber-400 block">
-                ⚠ Deficiency List / Recommended Review
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+              <span className="text-sm font-bold text-amber-400 block">
+                Concepts Recommended for Review
               </span>
               {session.grandQuiz.result.weakestConcepts.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {session.grandQuiz.result.weakestConcepts.map((c, i) => (
-                    <span key={i} className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[11px]">
-                      ⚠ {c}
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-200 text-xs"
+                    >
+                      • {ContentSanitizer.cleanText(c)}
                     </span>
                   ))}
                 </div>
               ) : (
-                <span className="text-xs text-emerald-300">No conceptual deficiencies detected!</span>
+                <span className="text-sm text-emerald-300">
+                  No conceptual gaps detected across the Grand Quiz.
+                </span>
               )}
             </div>
           </div>
 
           {/* Recommended Revision & Next Topic */}
-          <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-xs space-y-1">
+          <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-sm space-y-1.5">
             <div>
-              <strong className="text-indigo-300">Recommended Revision Strategy: </strong>
+              <strong className="text-indigo-300">Recommended Next Step: </strong>
               <span className="text-slate-200">{session.grandQuiz.result.recommendedRevision}</span>
             </div>
             <div>
-              <strong className="text-indigo-300">Suggested Next Topic: </strong>
-              <span className="text-emerald-300 font-semibold">{session.grandQuiz.result.suggestedNextTopic}</span>
+              <strong className="text-indigo-300">Suggested Continuation Topic: </strong>
+              <span className="text-emerald-300 font-semibold">
+                {session.grandQuiz.result.suggestedNextTopic}
+              </span>
             </div>
           </div>
         </div>
