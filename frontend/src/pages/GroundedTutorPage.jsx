@@ -10,7 +10,6 @@ import {
   User,
   Bot,
   Cpu,
-  Network,
   ChevronDown,
   ChevronUp,
   ArrowRight,
@@ -32,9 +31,11 @@ import { SourceCitation } from '../components/citations/SourceCitation';
 import { AdaptivePhaseStudio } from '../components/learning/AdaptivePhaseStudio';
 import { SmartExamMentorStudio } from '../components/learning/SmartExamMentorStudio';
 import { EducationalContentRenderer } from '../components/common/EducationalContentRenderer';
-import { INTENT_CLASSES } from '../services/aiOrchestrator';
+import { AIOrchestrator, INTENT_CLASSES } from '../services/aiOrchestrator';
 import { SmartExamEngine } from '../services/smartExamEngine';
-import { ContentSanitizer } from '../services/contentSanitizer';
+import { AdaptivePhaseEngine } from '../services/adaptivePhaseEngine';
+
+const STORAGE_KEY_CHAT_HISTORY = 'edupath_unlimited_chat_history_v1';
 
 export const GroundedTutorPage = ({
   onNavigateToSource,
@@ -44,31 +45,34 @@ export const GroundedTutorPage = ({
   onClearContext,
   refreshTrigger
 }) => {
-  const { currentCourse } = useAuth();
+  const { currentCourse, user } = useAuth();
   const [availableDocs, setAvailableDocs] = useState([]);
   const [expandedTraces, setExpandedTraces] = useState({});
   const [responseDepth, setResponseDepth] = useState('explanation'); // 'brief' | 'explanation'
   const [messageDepthOverrides, setMessageDepthOverrides] = useState({});
   const [copiedId, setCopiedId] = useState(null);
+  const [questionsAskedCount, setQuestionsAskedCount] = useState(() =>
+    AIOrchestrator.getQuestionsAskedCount()
+  );
 
   // Active Studio view: 'chat' | 'phases' | 'mentor'
   const [activeStudioView, setActiveStudioView] = useState('chat');
   const [studioTopic, setStudioTopic] = useState('');
 
-  const welcomeBrief = `**Adaptive AI Learning Companion**
-Ask any general question, explore your uploaded course materials, or enter the 3-Phase Adaptive Learning Studio to master topics step by step.
+  const welcomeBrief = `**Open AI Learning Space**
+Ask anything. Learn anything. Explore general computer science, programming, and academic questions, study your uploaded materials, or enter the 3-Phase Adaptive Learning Studio.
 
 *Brief Mode vs. Deep Explanation*
 Toggle between *Brief* (concise concept overview and key example) and *Deep Explanation* (comprehensive theory, step-by-step walkthrough, and common misconceptions) at any time.
 
 **Key Idea**
-Upload any textbook PDF, slide deck, or lecture notes, or select a document from the Scope menu above and click *3-Phase & Grand Quiz* to learn through Phase 1 (Foundation), Phase 2 (Application), Phase 3 (Mastery), and the 15-MCQ Grand Quiz.`;
+Ask → Understand → Practice → Master. Upload any textbook PDF, slide deck, or lecture notes, or select a document from the Scope menu above and click *3-Phase & Grand Quiz* to learn through Phase 1 (Foundation), Phase 2 (Application), Phase 3 (Mastery), and the 15-MCQ Grand Quiz.`;
 
-  const welcomeExplanation = `**Adaptive AI Learning Companion**
-Welcome to your unified learning workspace. You can ask general academic or engineering questions, query your uploaded study materials with source-grounded accuracy, or launch a structured 3-Phase Adaptive Learning session.
+  const welcomeExplanation = `**Open AI Learning Space — Adaptive Learning Companion**
+Welcome to your open, unlimited AI learning workspace. Ask any general academic, programming, or engineering question, query your uploaded study materials with source-grounded accuracy, or launch a structured 3-Phase Adaptive Learning session.
 
 *Source-Grounded RAG & General Knowledge*
-When you ask about your uploaded PDFs, slides, or notes, responses are grounded directly in your course material. When you ask general questions—such as *What is binary search?* or *Explain Design Thinking*—the tutor synthesizes a clear, structured lesson.
+When you ask about your uploaded PDFs, slides, or notes, responses are grounded directly in your course material. When you ask general questions—such as *What is artificial intelligence?*, *Explain binary search*, or *Write a C++ program for two sum*—the tutor synthesizes a clear, structured lesson.
 
 **Core Concept**
 Every topic can be studied in two synchronized depths: *Brief Mode* for rapid revision and *Deep Explanation Mode* for thorough conceptual mastery with worked examples.
@@ -80,11 +84,10 @@ Select any ingested document from the Scope dropdown and open *3-Phase & Grand Q
 • *Phase 3 (Mastery)*: Advanced edge cases, design trade-offs, and synthesis followed by 5 MCQs and the 15-question cross-phase Grand Quiz.
 
 **Example**
-Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must hold for a deadlock?"* below, or click any quick prompt to begin.`;
+Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, or *"Teach me Design Thinking"* below, or click any quick prompt to begin.`;
 
-  const initialTokenization = SmartExamEngine.tokenizeQuery('When was the Eiffel Tower built?');
   const initialRagDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
-    query: 'When was the Eiffel Tower built?',
+    query: 'What is artificial intelligence?',
     scopedDocument: 'Operating_Systems_Ch7_Deadlocks.pdf',
     chunksScanned: 8,
     bm25Score: 4.8,
@@ -92,65 +95,82 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
     sourceOrigin: 'Source-Grounded & General AI Synthesis'
   });
 
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: welcomeExplanation,
-      brief_content: welcomeBrief,
-      explanation_content: welcomeExplanation,
-      intent: 'SYSTEM_READY',
-      source_origin: 'Source-Grounded & General AI Synthesis',
-      tokenization: initialTokenization,
-      rag_diagrams: initialRagDiagrams,
-      citations: [
-        {
-          source_type: 'pdf',
-          document: 'Operating Systems Ch7 Deadlocks',
-          location_label: 'Page 42',
-          excerpt:
-            'Four Coffman conditions must hold simultaneously for a deadlock to arise: Mutual Exclusion, Hold and Wait, No Preemption, and Circular Wait.',
-          relevance: 0.99
-        }
-      ],
-      status: 'SUPPORTED',
-      follow_up_questions: [
-        'When was the Eiffel Tower built?',
-        '🎓 Teach me this course material in 3 Adaptive Phases',
-        'What is binary search? Explain with complexity & code',
-        'What four Coffman conditions must hold for a deadlock?',
-        "How does Dijkstra's Banker's Algorithm check for a safe sequence?"
-      ],
-      recommended_next_action: {
-        label: 'Open Smart Exam Mentor (MCQ / Fill-in-Blanks / True-False / Podcast)',
-        action_type: 'OPEN_SMART_MENTOR',
-        reason: 'Practice with Bayesian Active Learning P(θ|D), AI Podcast TTS, ELI12, and Flagged Questions.'
-      },
-      anatomy_trace: [
-        { step: 1, name: 'Secure Ingress & Context Assembly', detail: 'Sanitized input • 16-Class Intent Router' },
-        { step: 2, name: 'Tokenization & Query Embedding', detail: 'Splits input into subword tokens + 384-d vector' },
-        { step: 3, name: 'Model & Retrieval Inference', detail: 'Vector Store Retrieval + LLM Outside Knowledge' },
-        { step: 4, name: 'Prompt Assembly & Generation', detail: 'Combines retrieved context with instructions' },
-        { step: 5, name: 'Safety, Moderation & Grounding Gate', detail: 'Verified citations & injection guard' },
-        { step: 6, name: 'Grounded Response Delivery', detail: 'Instant ⚡ Brief / 📖 Explanation toggle' }
-      ],
-      pipeline_trace: {
-        status: 'VERIFIED_GROUNDED',
-        intent_detected: 'SYSTEM_READY',
-        mode_selected: 'beginner',
-        response_depth: 'explanation',
-        scope_applied: 'Entire Course Knowledge Base',
-        chunks_scanned: 8,
-        top_bm25_score: 4.8,
-        top_vector_score: 0.98,
-        rrf_confidence: '98%',
-        topic: 'Deadlocks & General AI',
-        concept: 'RAG Enhanced Chatbot & Bayesian Active Learning',
-        prerequisites: ['Resource Allocation', 'Processes & Threads'],
-        learner_mastery: 0.68
+  const defaultWelcomeMessage = {
+    id: 'welcome',
+    role: 'assistant',
+    content: welcomeExplanation,
+    brief_content: welcomeBrief,
+    explanation_content: welcomeExplanation,
+    intent: 'SYSTEM_READY',
+    source_origin: 'Source-Grounded & General AI Synthesis',
+    rag_diagrams: initialRagDiagrams,
+    citations: [
+      {
+        source_type: 'pdf',
+        document: 'Operating Systems Ch7 Deadlocks',
+        location_label: 'Page 42',
+        excerpt:
+          'Four Coffman conditions must hold simultaneously for a deadlock to arise: Mutual Exclusion, Hold and Wait, No Preemption, and Circular Wait.',
+        relevance: 0.99
       }
+    ],
+    status: 'SUPPORTED',
+    follow_up_questions: [
+      'What is artificial intelligence?',
+      '🎓 Teach me this course material in 3 Adaptive Phases',
+      'Explain binary search.',
+      'Write a C++ program for two sum.',
+      'What four Coffman conditions must hold for a deadlock?'
+    ],
+    recommended_next_action: {
+      label: 'Open Smart Exam Mentor (MCQ / Fill-in-Blanks / True-False / Podcast)',
+      action_type: 'OPEN_SMART_MENTOR',
+      reason: 'Practice with Bayesian Active Learning P(θ|D), AI Podcast TTS, ELI12, and Flagged Questions.'
+    },
+    anatomy_trace: [
+      { step: 1, name: 'Secure Ingress & Context Assembly', detail: 'Sanitized input • 16-Class Intent Router' },
+      { step: 2, name: 'Semantic & Lexical Indexing', detail: '384-d semantic vector + BM25 search terms' },
+      { step: 3, name: 'Model & Retrieval Inference', detail: 'Vector Store Retrieval + LLM Outside Knowledge' },
+      { step: 4, name: 'Prompt Assembly & Generation', detail: 'Combines retrieved context with instructions' },
+      { step: 5, name: 'Safety, Moderation & Grounding Gate', detail: 'Verified citations & injection guard' },
+      { step: 6, name: 'Grounded Response Delivery', detail: 'Instant ⚡ Brief / 📖 Explanation toggle' }
+    ],
+    pipeline_trace: {
+      status: 'VERIFIED_GROUNDED',
+      intent_detected: 'SYSTEM_READY',
+      mode_selected: 'beginner',
+      response_depth: 'explanation',
+      scope_applied: 'Entire Course Knowledge Base',
+      chunks_scanned: 8,
+      top_bm25_score: 4.8,
+      top_vector_score: 0.98,
+      rrf_confidence: '98%',
+      topic: 'Deadlocks & General AI',
+      concept: 'RAG Enhanced Chatbot & Bayesian Active Learning',
+      prerequisites: ['Resource Allocation', 'Processes & Threads'],
+      learner_mastery: 0.68
     }
-  ]);
+  };
+
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CHAT_HISTORY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return [defaultWelcomeMessage];
+  });
+
+  // Persist conversation history automatically without artificial limits
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_CHAT_HISTORY, JSON.stringify(messages));
+    } catch (_) {}
+  }, [messages]);
 
   const [input, setInput] = useState('');
   const [selectedMode, setSelectedMode] = useState('beginner');
@@ -171,13 +191,13 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
 
   const QUICK_PROMPTS = [
     '🎓 Teach me this material in 3 Adaptive Phases',
-    'When was the Eiffel Tower built?',
-    'What is binary search?',
+    'What is artificial intelligence?',
+    'Explain binary search.',
+    'Write a C++ program for two sum.',
+    'What is the difference between ML and DL?',
     'What four Coffman conditions must hold for a deadlock?',
     "How does Dijkstra's Banker's Algorithm check for a safe sequence?",
-    'Explain Enterprise Inventory FSM, Lock Ordering & Double-Entry Ledger',
-    'Explain Design Thinking 5 stages with examples',
-    'What is explained at timestamp 21:43 in Lecture 7 video?'
+    'Explain Design Thinking 5 stages with examples'
   ];
 
   // Load all documents (built-in + user-ingested) for the Scope selector
@@ -192,7 +212,7 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
     fetchDocs();
   }, [currentCourse, refreshTrigger]);
 
-  // Handle incoming context when user clicks "Teach Me This", "Smart Exam Mentor", or "Ask AI Tutor" from IngestionModal, SourceExplorer, etc.
+  // Handle incoming context when user clicks "Teach Me This", "Smart Exam Mentor", or "Ask AI Tutor"
   useEffect(() => {
     if (initialContext) {
       const targetScope = initialContext.scopedDocument || '';
@@ -237,6 +257,13 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
     }
   };
 
+  const handleResetConversation = () => {
+    setMessages([defaultWelcomeMessage]);
+    try {
+      localStorage.setItem(STORAGE_KEY_CHAT_HISTORY, JSON.stringify([defaultWelcomeMessage]));
+    } catch (_) {}
+  };
+
   const handleSend = async (
     textToSend,
     overrideScope = null,
@@ -278,7 +305,8 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
       scope: activeScope || 'All Course Materials + General AI'
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const nextHistory = [...messages, userMsg];
+    setMessages(nextHistory);
     if (!textToSend) setInput('');
     setLoading(true);
 
@@ -289,8 +317,16 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
         activeMode,
         currentCourse?.id || 'OS_101',
         scopeLoc,
-        activeDepth
+        activeDepth,
+        'en',
+        nextHistory
       );
+
+      if (res.questions_asked_count) {
+        setQuestionsAskedCount(res.questions_asked_count);
+      } else {
+        setQuestionsAskedCount(AIOrchestrator.getQuestionsAskedCount());
+      }
 
       const tutorMsgId = (Date.now() + 1).toString();
       const tutorMsg = {
@@ -301,12 +337,11 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
           res.answer ||
           res.content ||
           res.refusal_message ||
-          'I could not retrieve enough grounded evidence for that question.',
+          'Here is a structured explanation for your question.',
         brief_content: res.brief_content || res.answer,
         explanation_content: res.explanation_content || res.answer,
         intent: res.intent || INTENT_CLASSES.GENERAL_QUESTION,
-        source_origin: res.source_origin || 'Answer Combined with LLM & Outside Knowledge',
-        tokenization: res.tokenization || SmartExamEngine.tokenizeQuery(query),
+        source_origin: res.source_origin || 'General Knowledge & AI Reasoning',
         rag_diagrams: res.rag_diagrams || null,
         citations: res.citations || [],
         status: res.grounding_status || (res.is_refusal ? 'UNSUPPORTED' : 'SUPPORTED'),
@@ -317,7 +352,7 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
       };
 
       setMessages((prev) => [...prev, tutorMsg]);
-      setExpandedTraces((prev) => ({ ...prev, [tutorMsgId]: true }));
+      setExpandedTraces((prev) => ({ ...prev, [tutorMsgId]: false }));
     } catch (err) {
       console.error('Tutor error:', err);
     } finally {
@@ -351,9 +386,16 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
     window.speechSynthesis.speak(utterance);
   };
 
+  // Compute informational learning metrics (Section 7 — never usage limits!)
+  const activeLearningSession = AdaptivePhaseEngine.getSession();
+  const currentPhaseLabel = activeLearningSession
+    ? `Phase ${activeLearningSession.currentPhaseNumber || 1}`
+    : 'Phase 1';
+  const masteryPercent = Math.round((user?.profile?.overall_mastery || 0.68) * 100);
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto p-4 sm:p-6 space-y-3">
-      {/* Top Controls: 3-Way Studio Switcher, Brief/Explanation Toggle, Dynamic Scope & Ingest Trigger */}
+      {/* Top Controls: 3-Way Studio Switcher, Brief/Explanation Toggle, Dynamic Scope & Learning Information */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-lg space-y-3 shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Left: 3-Way Primary View Switcher (Chat | 3-Phase Studio | Smart Exam Mentor & Podcast) */}
@@ -368,7 +410,7 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                 }`}
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>AI Tutor & RAG Chat</span>
+                <span>AI Learning Space</span>
               </button>
               <button
                 onClick={() => setActiveStudioView('phases')}
@@ -461,6 +503,41 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
           </div>
         </div>
 
+        {/* Informational Learning Metrics Bar (Section 7 — Replaces any usage/token counters with pure learning state) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px]">
+          <div className="flex flex-wrap items-center gap-3 text-slate-300">
+            <span className="font-semibold text-emerald-400 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> Ask anything • Unlimited Learning
+            </span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span>
+              Learning Progress: <strong className="text-indigo-300">{masteryPercent}%</strong>
+            </span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span>
+              Current Phase: <strong className="text-amber-300">{currentPhaseLabel}</strong>
+            </span>
+            <span className="text-slate-600 hidden md:inline">|</span>
+            <span className="hidden md:inline">
+              Questions Asked: <strong className="text-sky-300">{questionsAskedCount}</strong>
+            </span>
+            <span className="text-slate-600 hidden lg:inline">|</span>
+            <span className="hidden lg:inline">
+              Material Covered: <strong className="text-emerald-300">{availableDocs.length} Sources</strong>
+            </span>
+          </div>
+
+          {messages.length > 1 && activeStudioView === 'chat' && (
+            <button
+              onClick={handleResetConversation}
+              className="text-[10px] text-slate-400 hover:text-slate-200 flex items-center gap-1"
+              title="Start a fresh conversation thread"
+            >
+              <RotateCcw className="w-3 h-3" /> New Thread
+            </button>
+          )}
+        </div>
+
         {/* 7 Pedagogical Modes Bar (shown when in AI Chat mode) */}
         {activeStudioView === 'chat' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -520,8 +597,6 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
             {messages.map((msg) => {
               const isUser = msg.role === 'user';
               const trace = msg.pipeline_trace;
-              const anatomy = msg.anatomy_trace;
-              const tok = msg.tokenization;
               const ragDiagrams = msg.rag_diagrams;
               const isTraceOpen = !!expandedTraces[msg.id];
               const msgDepth = messageDepthOverrides[msg.id] || responseDepth;
@@ -561,18 +636,18 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                           {msg.status === 'GENERAL_AI' && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/25">
                               <Globe className="w-3 h-3" />{' '}
-                              {msg.source_origin || 'Answer Combined with LLM & Outside Knowledge'}
+                              {msg.source_origin || 'General Knowledge & AI Reasoning'}
                             </span>
                           )}
                           {msg.status === 'PARTIALLY_SUPPORTED' && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                               <AlertCircle className="w-3 h-3" />{' '}
-                              {msg.source_origin || 'Answer Combined with LLM & Outside Knowledge'}
+                              {msg.source_origin || 'General Knowledge & AI Reasoning'}
                             </span>
                           )}
                           {msg.status === 'UNSUPPORTED' && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                              <AlertCircle className="w-3 h-3" /> Grounding Gate Refusal
+                              <AlertCircle className="w-3 h-3" /> Grounding Gate Notice
                             </span>
                           )}
 
@@ -580,11 +655,11 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                             <button
                               onClick={() => toggleTrace(msg.id)}
                               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/25 transition-colors"
-                              title="Inspect Tokenization, 5-Stage RAG Pipeline & 7-Step RAG Enhanced Chatbot Trace"
+                              title="Inspect 5-Stage RAG Pipeline & Learner Mastery Trace"
                             >
                               <Cpu className="w-3 h-3" />
                               <span>
-                                Tokenization & RAG Architecture ({trace.rrf_confidence || '98%'})
+                                Learning & RAG Context ({trace.rrf_confidence || '98%'})
                               </span>
                               {isTraceOpen ? (
                                 <ChevronUp className="w-3 h-3" />
@@ -671,13 +746,13 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                       </div>
                     )}
 
-                    {/* Collapsible Tokenization (Diagram 4), 5-Stage RAG Pipeline (Diagram 3) & 7-Step RAG Enhanced Flow (Diagram 1) */}
+                    {/* Collapsible 5-Stage RAG Pipeline & Learning Mastery Trace */}
                     {!isUser && trace && isTraceOpen && (
                       <div className="mb-3 p-3 rounded-xl bg-slate-950/90 border border-indigo-500/30 text-[11px] space-y-3 font-mono">
                         <div className="flex flex-wrap items-center justify-between gap-2 text-indigo-300 font-bold">
                           <span className="flex items-center gap-1.5">
                             <Layers className="w-3.5 h-3.5" />
-                            How LLM & RAG Enhanced Chatbot Processed This Query
+                            AI Orchestrator & RAG Pipeline Trace
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20">
                             Intent: {trace.intent_detected || msg.intent || 'QUESTION'} • Mode:{' '}
@@ -685,34 +760,11 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                           </span>
                         </div>
 
-                        {/* Diagram 4: Tokenization Pill Strip (Splits input into smaller chunks called tokens) */}
-                        {tok && tok.tokens?.length > 0 && (
-                          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
-                            <div className="flex items-center justify-between text-[10px] text-slate-400">
-                              <span className="font-bold text-amber-300">
-                                1. Tokenization (Splits input into smaller chunks called tokens):
-                              </span>
-                              <span>{tok.totalTokens} tokens</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {tok.tokens.map((t) => (
-                                <span
-                                  key={t.index}
-                                  className={`px-2 py-0.5 rounded border text-[10px] font-bold ${t.colorClass}`}
-                                  title={`Token ID: ${t.tokenId}`}
-                                >
-                                  {t.text}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Diagram 3: 5-Stage RAG Chatbot Architecture Pipeline */}
+                        {/* 5-Stage RAG Chatbot Architecture Pipeline */}
                         {ragDiagrams?.fiveStagePipeline && (
                           <div className="space-y-1">
                             <span className="text-[10px] font-bold text-sky-300 block">
-                              2. 5-Stage RAG Chatbot Architecture Pipeline:
+                              5-Stage RAG & Synthesis Architecture:
                             </span>
                             <div className="grid grid-cols-1 sm:grid-cols-5 gap-1.5 text-[10px]">
                               {ragDiagrams.fiveStagePipeline.map((st) => (
@@ -750,13 +802,13 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                             </span>
                           </div>
                           <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                            <span className="text-slate-400 block">Step 7 Synthesis</span>
+                            <span className="text-slate-400 block">Response Synthesis</span>
                             <span className="text-amber-400 font-bold truncate block">
-                              LLM + Outside Knowledge
+                              Grounded + General AI
                             </span>
                           </div>
                           <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                            <span className="text-slate-400 block">Bayesian Posterior θ'</span>
+                            <span className="text-slate-400 block">Bayesian Mastery θ'</span>
                             <span className="text-indigo-400 font-bold">
                               Mastery: {Math.round((trace.learner_mastery || 0.68) * 100)}% (+10 XP)
                             </span>
@@ -863,7 +915,7 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
                 <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-900 border border-slate-800">
                   <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
                   <span>
-                    Tokenizing Input → Executing 5-Stage RAG Retrieval → Combining LLM & Outside Knowledge...
+                    Analyzing Question → Retrieving Relevant Knowledge & Context → Composing Explanation...
                   </span>
                 </div>
               </div>
@@ -901,8 +953,8 @@ Try asking *"Teach me Design Thinking"* or *"What four Coffman conditions must h
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder={
                 scopedDocument
-                  ? `Ask about ${scopedDocument}, or type "Teach me this"...`
-                  : `Ask ANY question (e.g., "When was the Eiffel Tower built?", "What is binary search?", or "Teach me this")...`
+                  ? `Ask anything about ${scopedDocument}, or type "Teach me this"...`
+                  : `Ask anything — general CS/AI/coding questions, follow-ups, uploaded material, or "Quiz me"...`
               }
               className="flex-1 bg-transparent px-3 py-2 text-xs text-slate-200 outline-none placeholder:text-slate-500"
             />

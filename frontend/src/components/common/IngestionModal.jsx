@@ -231,7 +231,7 @@ export const IngestionModal = ({ isOpen, onClose, onUploadComplete, onNavigateWi
               <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Hybrid Index</span>
                 <span className="text-sm font-bold text-sky-400 font-mono">
-                  {summary?.bm25_tokens_indexed || 48} BM25 Tokens
+                  {summary?.bm25_tokens_indexed || 48} Indexed Terms
                 </span>
               </div>
             </div>
