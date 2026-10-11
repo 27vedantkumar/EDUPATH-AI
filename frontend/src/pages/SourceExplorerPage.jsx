@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { EducationalContentRenderer } from '../components/common/EducationalContentRenderer';
 
 export const SourceExplorerPage = ({
   onAskAboutSource,
@@ -242,10 +243,10 @@ export const SourceExplorerPage = ({
             {/* Grounded Text Content */}
             <div className="space-y-2">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                Extracted & Verified Source Text:
+                Verified Educational Source Content:
               </span>
-              <div className="p-5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">
-                {selectedUnit.content}
+              <div className="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <EducationalContentRenderer content={selectedUnit.content} />
               </div>
             </div>
 
