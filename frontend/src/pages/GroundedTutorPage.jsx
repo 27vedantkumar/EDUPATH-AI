@@ -23,13 +23,16 @@ import {
   Check,
   RotateCcw,
   MessageSquare,
-  Globe
+  Globe,
+  Headphones
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { SourceCitation } from '../components/citations/SourceCitation';
 import { AdaptivePhaseStudio } from '../components/learning/AdaptivePhaseStudio';
+import { SmartExamMentorStudio } from '../components/learning/SmartExamMentorStudio';
 import { INTENT_CLASSES } from '../services/aiOrchestrator';
+import { SmartExamEngine } from '../services/smartExamEngine';
 
 export const GroundedTutorPage = ({
   onNavigateToSource,
@@ -41,18 +44,28 @@ export const GroundedTutorPage = ({
 }) => {
   const { currentCourse } = useAuth();
   const [availableDocs, setAvailableDocs] = useState([]);
-  const [expandedTraces, setExpandedTraces] = useState({});
+  const [expandedTraces, setExpandedTraces] = useState({ welcome: true });
   const [responseDepth, setResponseDepth] = useState('explanation'); // 'brief' | 'explanation'
   const [messageDepthOverrides, setMessageDepthOverrides] = useState({});
   const [copiedId, setCopiedId] = useState(null);
 
-  // 3-Phase Adaptive Learning Studio state
-  const [showAdaptiveStudio, setShowAdaptiveStudio] = useState(false);
+  // Active Studio view: 'chat' | 'phases' | 'mentor'
+  const [activeStudioView, setActiveStudioView] = useState('chat');
   const [studioTopic, setStudioTopic] = useState('');
 
-  const welcomeBrief = `### ⚡ Brief Mode — Unified General-Purpose LLM + Grounded RAG + 3-Phase Adaptive Tutor\n• **Ask Anything (General AI)**: Ask about *Binary Search*, *Photosynthesis*, *Computer Networks (OSI/TCP)*, *Design Thinking*, or *Enterprise Inventory FSM*.\n• **Ask Uploaded Material (Contextual RAG)**: Grounded in your PDFs, PPTX slides, MP4 lecture timestamps, and custom notes with exact citations.\n• **🎓 3-Phase Adaptive Learning & Grand Quiz**: Click **"3-Phase Adaptive Studio"** above or type *"Teach me this"* to learn across **Phase 1 → Phase 2 → Phase 3** (5 MCQs each) + **15-MCQ Grand Quiz**!`;
+  const welcomeBrief = `### ⚡ Brief Mode — Unified General-Purpose LLM + Grounded RAG + 3-Phase Adaptive + Smart Exam Mentor\n• **Ask Anything (General AI + Outside Knowledge)**: Ask *"When was the Eiffel Tower built?"*, *"What is binary search?"*, *"Explain Design Thinking"*, or *"Explain Enterprise Inventory FSM"*.\n• **Ask Uploaded Material (5-Stage & 7-Step RAG)**: Grounded in your PDFs, PPTX slides, MP4 lecture videos, and audio transcripts.\n• **🎓 3-Phase Adaptive Learning & Grand Quiz**: Learn across **Phase 1 → Phase 2 → Phase 3** (5 MCQs each) + **15-MCQ Grand Quiz**.\n• **🧠 Smart Exam Mentor & Bayesian Active Learning**: Practice **MCQs**, **Fill in the Blanks**, **True/False**, **FAQs**, **🧒 ELI12**, and **🎙️ AI Study Podcasts** with live Bayesian $P(\\theta \\mid D)$ updating!`;
 
-  const welcomeExplanation = `Hello! I am your **Unified General-Purpose AI Tutor, Contextual RAG Assistant & 3-Phase Adaptive Learning Engine**.\n\n### 🚀 What You Can Do Here:\n1. **General-Purpose LLM Questions**: Ask *any* academic, coding, systems, or science question (e.g., *"What is binary search?"*, *"Explain Design Thinking"*, *"Explain Double-Entry Inventory FSM & Lock Ordering"*).\n2. **Source-Grounded RAG Questions**: Ask about your uploaded course materials, PDFs, slides, or video timestamps with verified citations.\n3. **⚡ Brief vs. 📖 Explanation Mode**: Toggle between concise high-signal summaries and deep step-by-step explanations at any time.\n4. **🎓 AI-Decided 3-Phase Learning & Grand Quiz**: Say **"Teach me this"** or click **3-Phase Adaptive Studio** above to let the AI partition your material into **Phase 1, Phase 2, and Phase 3**, test you with **5 MCQs per phase**, and unlock the **15-MCQ Cross-Phase Grand Quiz**!`;
+  const welcomeExplanation = `Hello! I am your **Unified General-Purpose AI Tutor, RAG Enhanced Chatbot, 3-Phase Adaptive Learning Engine & Smart Exam Mentor**.\n\n### 🚀 Complete Architecture Capabilities:\n1. **How LLM Works (Live Tokenization → LLM Processing → Response)**: Every query you type is split into subword tokens (click **Query Anatomy & RAG Trace** below to inspect the colored token chunks!).\n2. **RAG Enhanced Chatbot (5-Stage Pipeline & 7-Step Flow)**: Combines **Vector Store + Okapi BM25 Related Data** with **LLM & Outside Knowledge** so both uploaded course questions and general questions (*"When was the Eiffel Tower built?"*, *"What is binary search?"*) work seamlessly.\n3. **⚡ Brief vs. 📖 Explanation Mode + 🧒 ELI12**: Switch any answer between concise high-signal points, deep explanations, or *"Explain Like I'm 12"*.\n4. **🎓 3-Phase Adaptive Studio & Grand Quiz**: AI partitions material into **Phase 1, Phase 2, Phase 3** (5 MCQs each) + **15-MCQ Grand Quiz**.\n5. **🧠 Smart Exam Mentor & Bayesian Active Learning**: Includes **MCQ, Fill in the Blanks, True/False, Exam FAQs, AI Audio Podcast (TTS), Similar Content Recommendations**, and **Bayesian $P(\\theta \\mid D)$ + Flagged Question Active Learning**!`;
+
+  const initialTokenization = SmartExamEngine.tokenizeQuery('When was the Eiffel Tower built?');
+  const initialRagDiagrams = SmartExamEngine.buildUnifiedRagDiagrams({
+    query: 'When was the Eiffel Tower built?',
+    scopedDocument: 'Operating_Systems_Ch7_Deadlocks.pdf',
+    chunksScanned: 8,
+    bm25Score: 4.8,
+    vectorScore: 0.98,
+    sourceOrigin: 'Answer Combined with LLM & Outside Knowledge'
+  });
 
   const [messages, setMessages] = useState([
     {
@@ -62,7 +75,9 @@ export const GroundedTutorPage = ({
       brief_content: welcomeBrief,
       explanation_content: welcomeExplanation,
       intent: 'SYSTEM_READY',
-      source_origin: 'Hybrid RAG + General AI Orchestrator',
+      source_origin: 'Answer Combined with LLM & Outside Knowledge',
+      tokenization: initialTokenization,
+      rag_diagrams: initialRagDiagrams,
       citations: [
         {
           source_type: 'pdf',
@@ -75,24 +90,24 @@ export const GroundedTutorPage = ({
       ],
       status: 'SUPPORTED',
       follow_up_questions: [
+        'When was the Eiffel Tower built?',
         '🎓 Teach me this course material in 3 Adaptive Phases',
         'What is binary search? Explain with complexity & code',
         'What four Coffman conditions must hold for a deadlock?',
-        "How does Dijkstra's Banker's Algorithm check for a safe sequence?",
-        'Explain Enterprise Inventory Double-Entry Ledger & FSM Lock Ordering'
+        "How does Dijkstra's Banker's Algorithm check for a safe sequence?"
       ],
       recommended_next_action: {
-        label: 'Launch 3-Phase Adaptive Learning & Grand Quiz',
-        action_type: 'START_3_PHASE',
-        reason: 'Master the material through Phase 1, Phase 2, Phase 3 MCQs and the 15-question Grand Quiz.'
+        label: 'Open Smart Exam Mentor (MCQ / Fill-in-Blanks / True-False / Podcast)',
+        action_type: 'OPEN_SMART_MENTOR',
+        reason: 'Practice with Bayesian Active Learning P(θ|D), AI Podcast TTS, ELI12, and Flagged Questions.'
       },
       anatomy_trace: [
         { step: 1, name: 'Secure Ingress & Context Assembly', detail: 'Sanitized input • 16-Class Intent Router' },
-        { step: 2, name: 'Tokenization & Query Embedding', detail: '384-d semantic vector + BM25 lexical index' },
-        { step: 3, name: 'Model & Retrieval Inference', detail: 'General LLM + Hybrid RAG Fusion' },
-        { step: 4, name: 'Tool & RAG Execution', detail: 'Source-Addressable Knowledge Graph lookup' },
+        { step: 2, name: 'Tokenization & Query Embedding', detail: 'Splits input into subword tokens + 384-d vector' },
+        { step: 3, name: 'Model & Retrieval Inference', detail: 'Vector Store Retrieval + LLM Outside Knowledge' },
+        { step: 4, name: 'Prompt Assembly & Generation', detail: 'Combines retrieved context with instructions' },
         { step: 5, name: 'Safety, Moderation & Grounding Gate', detail: 'Verified citations & injection guard' },
-        { step: 6, name: 'Dual Brief & Explanation Synthesis', detail: 'Instant ⚡ Brief / 📖 Explanation toggle' }
+        { step: 6, name: 'Grounded Response Delivery', detail: 'Instant ⚡ Brief / 📖 Explanation toggle' }
       ],
       pipeline_trace: {
         status: 'VERIFIED_GROUNDED',
@@ -104,10 +119,10 @@ export const GroundedTutorPage = ({
         top_bm25_score: 4.8,
         top_vector_score: 0.98,
         rrf_confidence: '98%',
-        topic: 'Deadlocks & Systems',
-        concept: 'Coffman Conditions, Safe States & General AI',
+        topic: 'Deadlocks & General AI',
+        concept: 'RAG Enhanced Chatbot & Bayesian Active Learning',
         prerequisites: ['Resource Allocation', 'Processes & Threads'],
-        learner_mastery: 0.62
+        learner_mastery: 0.68
       }
     }
   ]);
@@ -121,6 +136,7 @@ export const GroundedTutorPage = ({
 
   const TUTOR_MODES = [
     { id: 'beginner', label: 'Beginner', desc: 'Analogies & step-by-step intuition' },
+    { id: 'eli12', label: '🧒 ELI12', desc: "Explain Like I'm 12 story mode" },
     { id: 'exam', label: 'Exam Mode', desc: 'High-yield points, formulas & traps' },
     { id: 'deep_dive', label: 'Deep Dive', desc: 'Formal proofs & kernel internals' },
     { id: 'socratic', label: 'Socratic', desc: 'Probing questions & guided hints' },
@@ -130,12 +146,12 @@ export const GroundedTutorPage = ({
 
   const QUICK_PROMPTS = [
     '🎓 Teach me this material in 3 Adaptive Phases',
+    'When was the Eiffel Tower built?',
     'What is binary search?',
     'What four Coffman conditions must hold for a deadlock?',
     "How does Dijkstra's Banker's Algorithm check for a safe sequence?",
     'Explain Enterprise Inventory FSM, Lock Ordering & Double-Entry Ledger',
     'Explain Design Thinking 5 stages with examples',
-    'Explain OSI Model & TCP 3-Way Handshake',
     'What is explained at timestamp 21:43 in Lecture 7 video?'
   ];
 
@@ -151,7 +167,7 @@ export const GroundedTutorPage = ({
     fetchDocs();
   }, [currentCourse, refreshTrigger]);
 
-  // Handle incoming context when user clicks "Teach Me This" or "Ask AI Tutor About This" from IngestionModal, SourceExplorer, etc.
+  // Handle incoming context when user clicks "Teach Me This", "Smart Exam Mentor", or "Ask AI Tutor" from IngestionModal, SourceExplorer, etc.
   useEffect(() => {
     if (initialContext) {
       const targetScope = initialContext.scopedDocument || '';
@@ -160,9 +176,12 @@ export const GroundedTutorPage = ({
       }
       if (initialContext.openAdaptiveStudio) {
         setStudioTopic(initialContext.customTopic || '');
-        setShowAdaptiveStudio(true);
+        setActiveStudioView('phases');
+      } else if (initialContext.openSmartMentor) {
+        setStudioTopic(initialContext.customTopic || '');
+        setActiveStudioView('mentor');
       } else if (initialContext.initialQuery) {
-        setShowAdaptiveStudio(false);
+        setActiveStudioView('chat');
         handleSend(initialContext.initialQuery, targetScope, initialContext.mode || selectedMode);
       }
       if (onClearContext) {
@@ -176,10 +195,10 @@ export const GroundedTutorPage = ({
   };
 
   useEffect(() => {
-    if (!showAdaptiveStudio) {
+    if (activeStudioView === 'chat') {
       scrollToBottom();
     }
-  }, [messages, showAdaptiveStudio]);
+  }, [messages, activeStudioView]);
 
   const toggleTrace = (msgId) => {
     setExpandedTraces((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
@@ -220,7 +239,7 @@ export const GroundedTutorPage = ({
         .replace(/in 3 adaptive phases/i, '')
         .trim();
       setStudioTopic(cleanedTopic);
-      setShowAdaptiveStudio(true);
+      setActiveStudioView('phases');
       if (!textToSend) setInput('');
       return;
     }
@@ -261,7 +280,9 @@ export const GroundedTutorPage = ({
         brief_content: res.brief_content || res.answer,
         explanation_content: res.explanation_content || res.answer,
         intent: res.intent || INTENT_CLASSES.GENERAL_QUESTION,
-        source_origin: res.source_origin || 'Hybrid RAG + General AI',
+        source_origin: res.source_origin || 'Answer Combined with LLM & Outside Knowledge',
+        tokenization: res.tokenization || SmartExamEngine.tokenizeQuery(query),
+        rag_diagrams: res.rag_diagrams || null,
         citations: res.citations || [],
         status: res.grounding_status || (res.is_refusal ? 'UNSUPPORTED' : 'SUPPORTED'),
         follow_up_questions: res.follow_up_questions || [],
@@ -271,6 +292,7 @@ export const GroundedTutorPage = ({
       };
 
       setMessages((prev) => [...prev, tutorMsg]);
+      setExpandedTraces((prev) => ({ ...prev, [tutorMsgId]: true }));
     } catch (err) {
       console.error('Tutor error:', err);
     } finally {
@@ -282,7 +304,7 @@ export const GroundedTutorPage = ({
   const handleModeSelect = (newModeId) => {
     setSelectedMode(newModeId);
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-    if (lastUserMsg && !loading && !showAdaptiveStudio) {
+    if (lastUserMsg && !loading && activeStudioView === 'chat') {
       handleSend(lastUserMsg.content, scopedDocument, newModeId, responseDepth);
     }
   };
@@ -306,16 +328,16 @@ export const GroundedTutorPage = ({
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto p-4 sm:p-6 space-y-3">
-      {/* Top Controls: Mode Switcher, Brief/Explanation Toggle, 3-Phase Studio Toggle, Dynamic Scope & Ingest Trigger */}
+      {/* Top Controls: 3-Way Studio Switcher, Brief/Explanation Toggle, Dynamic Scope & Ingest Trigger */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-lg space-y-3 shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          {/* Left: Chat vs 3-Phase Studio Primary View Switcher */}
+          {/* Left: 3-Way Primary View Switcher (Chat | 3-Phase Studio | Smart Exam Mentor & Podcast) */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+            <div className="inline-flex flex-wrap rounded-xl bg-slate-950 p-1 border border-slate-800 gap-1">
               <button
-                onClick={() => setShowAdaptiveStudio(false)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                  !showAdaptiveStudio
+                onClick={() => setActiveStudioView('chat')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  activeStudioView === 'chat'
                     ? 'bg-indigo-600 text-white shadow'
                     : 'text-slate-400 hover:text-white'
                 }`}
@@ -324,15 +346,26 @@ export const GroundedTutorPage = ({
                 <span>AI Tutor & RAG Chat</span>
               </button>
               <button
-                onClick={() => setShowAdaptiveStudio(true)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                  showAdaptiveStudio
+                onClick={() => setActiveStudioView('phases')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  activeStudioView === 'phases'
                     ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 shadow'
                     : 'text-amber-300 hover:text-amber-200'
                 }`}
               >
                 <GraduationCap className="w-3.5 h-3.5" />
-                <span>🎓 3-Phase Adaptive Studio & Grand Quiz</span>
+                <span>🎓 3-Phase & Grand Quiz</span>
+              </button>
+              <button
+                onClick={() => setActiveStudioView('mentor')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  activeStudioView === 'mentor'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow'
+                    : 'text-emerald-300 hover:text-emerald-200'
+                }`}
+              >
+                <Headphones className="w-3.5 h-3.5" />
+                <span>🧠 Smart Exam Mentor & Podcast</span>
               </button>
             </div>
 
@@ -378,10 +411,10 @@ export const GroundedTutorPage = ({
             <select
               value={scopedDocument}
               onChange={(e) => setScopedDocument(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 text-xs max-w-[230px]"
+              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 text-xs max-w-[220px]"
             >
               <option value="">
-                All Course Material + General AI ({availableDocs.length} sources)
+                All Sources + General AI ({availableDocs.length} files)
               </option>
               {availableDocs.map((doc) => (
                 <option key={doc.id} value={doc.filename}>
@@ -394,7 +427,7 @@ export const GroundedTutorPage = ({
               <button
                 onClick={onOpenUpload}
                 className="px-2.5 py-1.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                title="Ingest new PDF, PPTX, Video, or Study Notes into Tutor & 3-Phase Engine"
+                title="Ingest new PDF, PPTX, Video, Audio, or Study Notes"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>+ Ingest Material</span>
@@ -403,9 +436,9 @@ export const GroundedTutorPage = ({
           </div>
         </div>
 
-        {/* 6 Pedagogical Modes Bar (shown when in AI Chat mode) */}
-        {!showAdaptiveStudio && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        {/* 7 Pedagogical Modes Bar (shown when in AI Chat mode) */}
+        {activeStudioView === 'chat' && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {TUTOR_MODES.map((mode) => {
               const isActive = selectedMode === mode.id;
               return (
@@ -430,15 +463,27 @@ export const GroundedTutorPage = ({
         )}
       </div>
 
-      {/* Main Content Area: Either 3-Phase Adaptive Learning Studio OR Conversational AI Chat */}
-      {showAdaptiveStudio ? (
+      {/* Main Content Area: 3-Phase Adaptive Studio | Smart Exam Mentor Studio | Conversational AI Chat */}
+      {activeStudioView === 'phases' ? (
         <div className="flex-1 overflow-y-auto pr-1">
           <AdaptivePhaseStudio
             scopedDocument={scopedDocument}
             initialTopic={studioTopic}
-            onClose={() => setShowAdaptiveStudio(false)}
+            onClose={() => setActiveStudioView('chat')}
             onAskTutorQuestion={(q) => {
-              setShowAdaptiveStudio(false);
+              setActiveStudioView('chat');
+              handleSend(q, scopedDocument, selectedMode, responseDepth);
+            }}
+          />
+        </div>
+      ) : activeStudioView === 'mentor' ? (
+        <div className="flex-1 overflow-y-auto pr-1">
+          <SmartExamMentorStudio
+            scopedDocument={scopedDocument}
+            customTopic={studioTopic}
+            onClose={() => setActiveStudioView('chat')}
+            onAskTutorQuestion={(q) => {
+              setActiveStudioView('chat');
               handleSend(q, scopedDocument, selectedMode, responseDepth);
             }}
           />
@@ -451,6 +496,8 @@ export const GroundedTutorPage = ({
               const isUser = msg.role === 'user';
               const trace = msg.pipeline_trace;
               const anatomy = msg.anatomy_trace;
+              const tok = msg.tokenization;
+              const ragDiagrams = msg.rag_diagrams;
               const isTraceOpen = !!expandedTraces[msg.id];
               const msgDepth = messageDepthOverrides[msg.id] || responseDepth;
               const displayedContent = isUser
@@ -488,12 +535,14 @@ export const GroundedTutorPage = ({
                           )}
                           {msg.status === 'GENERAL_AI' && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/25">
-                              <Globe className="w-3 h-3" /> {msg.source_origin || 'General AI Knowledge'}
+                              <Globe className="w-3 h-3" />{' '}
+                              {msg.source_origin || 'Answer Combined with LLM & Outside Knowledge'}
                             </span>
                           )}
                           {msg.status === 'PARTIALLY_SUPPORTED' && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                              <AlertCircle className="w-3 h-3" /> {msg.source_origin || 'General Knowledge Fallback'}
+                              <AlertCircle className="w-3 h-3" />{' '}
+                              {msg.source_origin || 'Answer Combined with LLM & Outside Knowledge'}
                             </span>
                           )}
                           {msg.status === 'UNSUPPORTED' && (
@@ -506,11 +555,11 @@ export const GroundedTutorPage = ({
                             <button
                               onClick={() => toggleTrace(msg.id)}
                               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/25 transition-colors"
-                              title="Inspect 6-Step Query Anatomy & Hybrid RAG Execution Trace"
+                              title="Inspect Tokenization, 5-Stage RAG Pipeline & 7-Step RAG Enhanced Chatbot Trace"
                             >
                               <Cpu className="w-3 h-3" />
                               <span>
-                                Query Anatomy & RAG Trace ({trace.rrf_confidence || '98%'})
+                                Tokenization & RAG Architecture ({trace.rrf_confidence || '98%'})
                               </span>
                               {isTraceOpen ? (
                                 <ChevronUp className="w-3 h-3" />
@@ -597,13 +646,13 @@ export const GroundedTutorPage = ({
                       </div>
                     )}
 
-                    {/* Collapsible 6-Step Query Anatomy & RAG Architecture Trace Box */}
+                    {/* Collapsible Tokenization (Diagram 4), 5-Stage RAG Pipeline (Diagram 3) & 7-Step RAG Enhanced Flow (Diagram 1) */}
                     {!isUser && trace && isTraceOpen && (
-                      <div className="mb-3 p-3 rounded-xl bg-slate-950/90 border border-indigo-500/30 text-[11px] space-y-2.5 font-mono">
+                      <div className="mb-3 p-3 rounded-xl bg-slate-950/90 border border-indigo-500/30 text-[11px] space-y-3 font-mono">
                         <div className="flex flex-wrap items-center justify-between gap-2 text-indigo-300 font-bold">
                           <span className="flex items-center gap-1.5">
                             <Layers className="w-3.5 h-3.5" />
-                            6-Step Query Anatomy & Hybrid RAG Execution Trace
+                            How LLM & RAG Enhanced Chatbot Processed This Query
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20">
                             Intent: {trace.intent_detected || msg.intent || 'QUESTION'} • Mode:{' '}
@@ -611,25 +660,60 @@ export const GroundedTutorPage = ({
                           </span>
                         </div>
 
-                        {anatomy && (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10px]">
-                            {anatomy.map((st) => (
-                              <div
-                                key={st.step}
-                                className="p-2 rounded bg-slate-900/90 border border-slate-800"
-                              >
-                                <span className="text-indigo-400 font-bold block">
-                                  {st.step}. {st.name}
+                        {/* Diagram 4: Tokenization Pill Strip (Splits input into smaller chunks called tokens) */}
+                        {tok && tok.tokens?.length > 0 && (
+                          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <span className="font-bold text-amber-300">
+                                1. Tokenization (Splits input into smaller chunks called tokens):
+                              </span>
+                              <span>{tok.totalTokens} tokens</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {tok.tokens.map((t) => (
+                                <span
+                                  key={t.index}
+                                  className={`px-2 py-0.5 rounded border text-[10px] font-bold ${t.colorClass}`}
+                                  title={`Token ID: ${t.tokenId}`}
+                                >
+                                  {t.text}
                                 </span>
-                                <span className="text-slate-400 truncate block">{st.detail}</span>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         )}
 
+                        {/* Diagram 3: 5-Stage RAG Chatbot Architecture Pipeline */}
+                        {ragDiagrams?.fiveStagePipeline && (
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-sky-300 block">
+                              2. 5-Stage RAG Chatbot Architecture Pipeline:
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-5 gap-1.5 text-[10px]">
+                              {ragDiagrams.fiveStagePipeline.map((st) => (
+                                <div
+                                  key={st.stage}
+                                  className="p-2 rounded bg-slate-900 border border-slate-800"
+                                >
+                                  <span className="text-sky-400 font-bold block">
+                                    {st.stage}. {st.title}
+                                  </span>
+                                  <span className="text-slate-400 block text-[9px] leading-tight mt-0.5">
+                                    {st.subtitle}
+                                  </span>
+                                  <span className="text-emerald-300 block truncate mt-1 font-semibold">
+                                    {st.metric}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Core RAG + Graph + Bayesian Learner Metrics */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] pt-1 border-t border-slate-800/80">
                           <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                            <span className="text-slate-400 block">Hybrid RAG Core</span>
+                            <span className="text-slate-400 block">Vector Store + BM25</span>
                             <span className="text-emerald-400 font-bold">
                               BM25: {trace.top_bm25_score ?? 3.8} | Vec: {trace.top_vector_score ?? 0.95}
                             </span>
@@ -641,15 +725,15 @@ export const GroundedTutorPage = ({
                             </span>
                           </div>
                           <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                            <span className="text-slate-400 block">Prerequisites</span>
+                            <span className="text-slate-400 block">Step 7 Synthesis</span>
                             <span className="text-amber-400 font-bold truncate block">
-                              {(trace.prerequisites || ['Core Logic']).join(', ')}
+                              LLM + Outside Knowledge
                             </span>
                           </div>
                           <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                            <span className="text-slate-400 block">Learner Model</span>
+                            <span className="text-slate-400 block">Bayesian Posterior θ'</span>
                             <span className="text-indigo-400 font-bold">
-                              Mastery: {Math.round((trace.learner_mastery || 0.62) * 100)}% (+10 XP)
+                              Mastery: {Math.round((trace.learner_mastery || 0.68) * 100)}% (+10 XP)
                             </span>
                           </div>
                         </div>
@@ -695,7 +779,11 @@ export const GroundedTutorPage = ({
                                 onClick={() => {
                                   if (msg.recommended_next_action.action_type === 'START_3_PHASE') {
                                     setStudioTopic(msg.recommended_next_action.topic || '');
-                                    setShowAdaptiveStudio(true);
+                                    setActiveStudioView('phases');
+                                  } else if (
+                                    msg.recommended_next_action.action_type === 'OPEN_SMART_MENTOR'
+                                  ) {
+                                    setActiveStudioView('mentor');
                                   } else if (onNavigateTab) {
                                     onNavigateTab(msg.recommended_next_action.tab || 'assessment');
                                   }
@@ -746,7 +834,7 @@ export const GroundedTutorPage = ({
                 <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-900 border border-slate-800">
                   <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
                   <span>
-                    Executing Intent Router → Hybrid RAG (Vector + Okapi BM25) → General LLM & Dual Brief/Explanation Synthesis...
+                    Tokenizing Input → Executing 5-Stage RAG Retrieval → Combining LLM & Outside Knowledge...
                   </span>
                 </div>
               </div>
@@ -784,18 +872,26 @@ export const GroundedTutorPage = ({
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder={
                 scopedDocument
-                  ? `Ask about ${scopedDocument}, or type "Teach me this" for 3-Phase Adaptive Mode...`
-                  : `Ask ANY question (e.g., "What is binary search?", "Explain Deadlocks", or "Teach me this")...`
+                  ? `Ask about ${scopedDocument}, or type "Teach me this"...`
+                  : `Ask ANY question (e.g., "When was the Eiffel Tower built?", "What is binary search?", or "Teach me this")...`
               }
               className="flex-1 bg-transparent px-3 py-2 text-xs text-slate-200 outline-none placeholder:text-slate-500"
             />
             <button
-              onClick={() => setShowAdaptiveStudio(true)}
+              onClick={() => setActiveStudioView('mentor')}
+              className="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold hidden md:flex items-center gap-1.5 shrink-0 transition-all"
+              title="Open Smart Exam Mentor (MCQ, Fill-in-Blanks, True/False, FAQ, Podcast & ELI12)"
+            >
+              <Headphones className="w-3.5 h-3.5" />
+              <span>Smart Exam Mentor</span>
+            </button>
+            <button
+              onClick={() => setActiveStudioView('phases')}
               className="px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold hidden sm:flex items-center gap-1.5 shrink-0 transition-all"
               title="Open 3-Phase Adaptive Learning & Grand Quiz Studio"
             >
               <GraduationCap className="w-3.5 h-3.5" />
-              <span>Teach Me (3 Phases)</span>
+              <span>3-Phase Studio</span>
             </button>
             <button
               onClick={() => handleSend()}
