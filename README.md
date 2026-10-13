@@ -46,6 +46,7 @@ EduPath AI is built around three foundational, tightly integrated layers:
 
 ## 🚀 Core Features
 
+- **Day & Night Adaptive Theme**: Seamless theme switching between **Day Mode** (soft lavender canvas `#f4f5fd` with crisp white cards) and **Night Mode** (deep **True Black `#000000`** canvas with dark sleek charcoal surfaces `#0a0b10`), persisted via `localStorage` and accessible from the top navigation bar.
 - **Grounded AI Tutor**: 6 distinct tutoring modes (*Beginner*, *Exam*, *Deep Dive*, *Socratic*, *Interview*, *Bilingual*) with live source citation chips, audio read-aloud TTS, and strict refusal of out-of-domain queries.
 - **Interactive Knowledge Graph**: SVG visual topology with pan, zoom, mastery color-coding (Green/Yellow/Red), prerequisite locks, and click-to-remediate drawers.
 - **Source Explorer**: Hierarchical course repository allowing students to inspect original textbook pages, slide presenter notes, and seek directly to video lecture timestamps (`21:43`).
