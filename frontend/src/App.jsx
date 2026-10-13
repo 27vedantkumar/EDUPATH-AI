@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
@@ -104,8 +105,8 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <Navbar onOpenUpload={() => setIsUploadOpen(true)} />
+    <div className="min-h-screen bg-[#f4f5fd] dark:bg-black text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      <Navbar onOpenUpload={() => setIsUploadOpen(true)} onSelectTab={setCurrentTab} currentTab={currentTab} />
 
       <div className="flex-1 flex overflow-hidden">
         <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
@@ -129,8 +130,10 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
