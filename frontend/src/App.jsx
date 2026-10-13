@@ -17,6 +17,7 @@ import { CodingLabPage } from './pages/CodingLabPage';
 import { GamesPage } from './pages/GamesPage';
 
 const AppContent = () => {
+  const { themeConfig } = useTheme();
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -105,7 +106,10 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f5fd] dark:bg-black text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div
+      style={{ backgroundColor: themeConfig.bgCanvas }}
+      className="min-h-screen text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200"
+    >
       <Navbar onOpenUpload={() => setIsUploadOpen(true)} onSelectTab={setCurrentTab} currentTab={currentTab} />
 
       <div className="flex-1 flex overflow-hidden">

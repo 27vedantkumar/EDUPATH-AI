@@ -2,6 +2,19 @@
 
 All notable changes to the **EduPath AI — Multimodal Adaptive Learning Companion** platform will be documented in this file.
 
+## [1.3.0] - 2026-10-14
+
+### Added
+- **4-Theme System (2 Day + 2 Night) Matching Design Specification**:
+  - **Day 1 • Warm Peach (Page 1)**: Warm cream canvas (`#fbf5ee`), apricot welcome banner (`#fed8cd`), yellow course pill (`#fef08a`), peach ingest button (`#fed8cd`), black action buttons, peach remediation pill (`#fed8cd`), and golden Socratic pill (`#fef08a`) with crisp borders.
+  - **Day 2 • Soft Rose (Page 2)**: Blush rose canvas (`#fcf2f4`), soft rose welcome banner (`#fce3e8`), rose course pill (`#fce7f3`), blush ingest button (`#fdd9e0`), and lavender Socratic pill (`#f3e8ff`).
+  - **Night 1 • Midnight Indigo (Page 3)**: Deep midnight navy canvas (`#0c0e1d`), violet welcome banner (`#21274a`), mint course pill (`#6ee7b7`), vibrant periwinkle ingest button (`#818cf8`), and mint Socratic pill (`#6ee7b7`).
+  - **Night 2 • Cyber Emerald (Page 4)**: Obsidian forest canvas (`#071312`), deep emerald banner (`#173330`), lime course pill (`#fef08a`), bright seafoam ingest button (`#5eead4`), and lime Socratic pill (`#fef08a`).
+- **Interactive 4-Theme Picker & Day/Night Toggle**:
+  - Quick dropdown in top navigation bar to select any of the 4 themes with live swatches.
+  - Dedicated Sun/Moon toggle button that seamlessly transitions between active Day and Night palettes while preserving user preferences.
+  - Distinctive bordered button arrangements (`border-[1.5px] border-slate-900`) matching the PDF design.
+
 ## [1.2.0] - 2026-10-13
 
 ### Added

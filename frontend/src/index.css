@@ -4,42 +4,95 @@
 
 @layer base {
   :root {
-    --bg-app: #f4f5fd;
-    --bg-surface: #ffffff;
-    --bg-subtle: #f6f7fe;
-    --border-main: #e2e5f5;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
+    --theme-bg-canvas: #fbf5ee;
+    --theme-bg-card: #ffffff;
+    --theme-bg-inner-card: #feece5;
+    --theme-border-card: #f3e8dc;
+    --theme-banner-bg: #fed8cd;
+    --theme-banner-border: #fbc8b7;
+    --theme-course-pill: #fef08a;
+    --theme-ingest-btn: #fed8cd;
+    --theme-remediation-btn: #fed8cd;
+    --theme-socratic-btn: #fef08a;
   }
 
-  html.dark {
-    --bg-app: #000000;
-    --bg-surface: #0a0b10;
-    --bg-subtle: #10111a;
-    --border-main: #1a1c26;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
+  [data-theme="day-peach"] {
+    --theme-bg-canvas: #fbf5ee;
+    --theme-bg-card: #ffffff;
+    --theme-bg-inner-card: #feece5;
+    --theme-border-card: #f3e8dc;
+    --theme-banner-bg: #fed8cd;
+    --theme-banner-border: #fbc8b7;
+    --theme-course-pill: #fef08a;
+    --theme-ingest-btn: #fed8cd;
+    --theme-remediation-btn: #fed8cd;
+    --theme-socratic-btn: #fef08a;
+  }
+
+  [data-theme="day-rose"] {
+    --theme-bg-canvas: #fcf2f4;
+    --theme-bg-card: #ffffff;
+    --theme-bg-inner-card: #fef2f4;
+    --theme-border-card: #fce7eb;
+    --theme-banner-bg: #fce3e8;
+    --theme-banner-border: #f9bfcb;
+    --theme-course-pill: #fce7f3;
+    --theme-ingest-btn: #fdd9e0;
+    --theme-remediation-btn: #fdd9e0;
+    --theme-socratic-btn: #f3e8ff;
+  }
+
+  [data-theme="night-indigo"] {
+    --theme-bg-canvas: #0c0e1d;
+    --theme-bg-card: #161932;
+    --theme-bg-inner-card: #1a1e3d;
+    --theme-border-card: #24284d;
+    --theme-banner-bg: #21274a;
+    --theme-banner-border: #3b4280;
+    --theme-course-pill: #6ee7b7;
+    --theme-ingest-btn: #818cf8;
+    --theme-remediation-btn: #818cf8;
+    --theme-socratic-btn: #6ee7b7;
+  }
+
+  [data-theme="night-emerald"] {
+    --theme-bg-canvas: #071312;
+    --theme-bg-card: #10211f;
+    --theme-bg-inner-card: #142a27;
+    --theme-border-card: #1c3835;
+    --theme-banner-bg: #173330;
+    --theme-banner-border: #28544f;
+    --theme-course-pill: #fef08a;
+    --theme-ingest-btn: #5eead4;
+    --theme-remediation-btn: #5eead4;
+    --theme-socratic-btn: #fef08a;
   }
 
   body {
-    @apply bg-[#f4f5fd] text-slate-900 dark:bg-black dark:text-slate-100 antialiased selection:bg-indigo-500 selection:text-white font-sans transition-colors duration-200;
+    background-color: var(--theme-bg-canvas);
+    color: #1e293b;
+    @apply antialiased selection:bg-indigo-500 selection:text-white font-sans transition-colors duration-200;
+  }
+
+  .dark body {
+    color: #f8fafc;
   }
 }
 
-/* Light / Day mode overrides for existing slate surfaces so all views look crisp and clean */
+/* Light / Day mode overrides for legacy slate surfaces in non-dashboard tabs */
 html:not(.dark) .bg-slate-950,
 html.light .bg-slate-950 {
-  background-color: #f4f5fd !important;
+  background-color: var(--theme-bg-canvas) !important;
 }
 
 html:not(.dark) .bg-slate-900,
 html.light .bg-slate-900 {
-  background-color: #ffffff !important;
+  background-color: var(--theme-bg-card) !important;
 }
 
 html:not(.dark) .border-slate-800,
 html.light .border-slate-800 {
-  border-color: #e2e5f5 !important;
+  border-color: var(--theme-border-card) !important;
 }
 
 html:not(.dark) .border-slate-700,
@@ -76,7 +129,7 @@ html.light .text-slate-400 {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f4f5fd;
+  background: var(--theme-bg-canvas);
 }
 
 .dark ::-webkit-scrollbar-track {
