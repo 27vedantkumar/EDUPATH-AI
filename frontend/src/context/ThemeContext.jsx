@@ -62,11 +62,11 @@ export const THEME_DEFINITIONS = {
     type: 'night',
     label: 'Indigo Night',
     icon: '🌌',
-    bgCanvas: '#0c0e1d',
-    bgCard: '#161932',
-    bgInnerCard: '#1a1e3d',
+    bgCanvas: '#000000',
+    bgCard: '#111322',
+    bgInnerCard: '#171a2e',
     borderCard: '#24284d',
-    bannerBg: '#21274a',
+    bannerBg: '#1a1f3d',
     bannerBorder: '#3b4280',
     coursePillBg: '#6ee7b7',
     ingestBtnBg: '#818cf8',
@@ -74,7 +74,7 @@ export const THEME_DEFINITIONS = {
     socraticBtnBg: '#6ee7b7',
     askTutorBtnBg: '#121524',
     askTutorBtnText: '#ffffff',
-    diagnosticBtnBg: '#23284a',
+    diagnosticBtnBg: '#1f2444',
     diagnosticBtnBorder: '#3b4280',
     textMain: '#f8fafc',
     textMuted: '#94a3b8',
@@ -89,11 +89,11 @@ export const THEME_DEFINITIONS = {
     type: 'night',
     label: 'Emerald Night',
     icon: '🌿',
-    bgCanvas: '#071312',
-    bgCard: '#10211f',
-    bgInnerCard: '#142a27',
+    bgCanvas: '#000000',
+    bgCard: '#0c1a18',
+    bgInnerCard: '#122623',
     borderCard: '#1c3835',
-    bannerBg: '#173330',
+    bannerBg: '#142c29',
     bannerBorder: '#28544f',
     coursePillBg: '#fef08a',
     ingestBtnBg: '#5eead4',
@@ -101,7 +101,7 @@ export const THEME_DEFINITIONS = {
     socraticBtnBg: '#fef08a',
     askTutorBtnBg: '#07100f',
     askTutorBtnText: '#ffffff',
-    diagnosticBtnBg: '#18302d',
+    diagnosticBtnBg: '#152b28',
     diagnosticBtnBorder: '#28544f',
     textMain: '#f8fafc',
     textMuted: '#94a3b8',
@@ -154,6 +154,8 @@ export const ThemeProvider = ({ children }) => {
     root.style.setProperty('--theme-ingest-btn', themeConfig.ingestBtnBg);
     root.style.setProperty('--theme-remediation-btn', themeConfig.remediationBtnBg);
     root.style.setProperty('--theme-socratic-btn', themeConfig.socraticBtnBg);
+    root.style.setProperty('--theme-text-main', themeConfig.textMain);
+    root.style.setProperty('--theme-text-muted', themeConfig.textMuted);
 
     try {
       localStorage.setItem(STORAGE_KEY_THEME_ID, theme);

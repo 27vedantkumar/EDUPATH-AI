@@ -79,35 +79,57 @@
   }
 }
 
-/* Light / Day mode overrides for legacy slate surfaces in non-dashboard tabs */
-html:not(.dark) .bg-slate-950,
-html.light .bg-slate-950 {
-  background-color: var(--theme-bg-canvas) !important;
-}
+/* =========================================================================
+   Light / Day mode overrides for legacy slate surfaces in non-dashboard tabs
+   ========================================================================= */
 
-html:not(.dark) .bg-slate-900,
-html.light .bg-slate-900 {
+/* Top-level cards and main panels */
+html:not(.dark) [class*="bg-slate-900"],
+html.light [class*="bg-slate-900"] {
   background-color: var(--theme-bg-card) !important;
 }
 
-html:not(.dark) .border-slate-800,
-html.light .border-slate-800 {
+/* Inner wells, subtle item boxes, and option buttons */
+html:not(.dark) [class*="bg-slate-950"],
+html:not(.dark) [class*="bg-slate-800"],
+html.light [class*="bg-slate-950"],
+html.light [class*="bg-slate-800"] {
+  background-color: var(--theme-bg-inner-card) !important;
+}
+
+/* Outer & inner borders */
+html:not(.dark) [class*="border-slate-800"],
+html:not(.dark) [class*="border-slate-900"],
+html.light [class*="border-slate-800"],
+html.light [class*="border-slate-900"] {
   border-color: var(--theme-border-card) !important;
 }
 
-html:not(.dark) .border-slate-700,
-html.light .border-slate-700 {
+html:not(.dark) [class*="border-slate-700"],
+html.light [class*="border-slate-700"] {
   border-color: #cbd5e1 !important;
 }
 
+/* Hover surfaces in Day mode */
+html:not(.dark) [class*="hover:bg-slate-800"]:hover,
+html.light [class*="hover:bg-slate-800"]:hover {
+  background-color: var(--theme-banner-bg) !important;
+}
+
+html:not(.dark) [class*="hover:bg-slate-950"]:hover,
+html.light [class*="hover:bg-slate-950"]:hover {
+  background-color: var(--theme-border-card) !important;
+}
+
+/* High contrast text on light surfaces */
 html:not(.dark) .text-white,
 html.light .text-white {
   color: #0f172a !important;
 }
 
 html:not(.dark) .text-slate-100,
-html.light .text-slate-100,
 html:not(.dark) .text-slate-200,
+html.light .text-slate-100,
 html.light .text-slate-200 {
   color: #1e293b !important;
 }
@@ -120,6 +142,66 @@ html.light .text-slate-300 {
 html:not(.dark) .text-slate-400,
 html.light .text-slate-400 {
   color: #64748b !important;
+}
+
+/* CRITICAL: Protect white text on colored/dark action buttons & badges */
+html:not(.dark) [class*="bg-indigo-600"],
+html:not(.dark) [class*="bg-indigo-500"],
+html:not(.dark) [class*="bg-emerald-600"],
+html:not(.dark) [class*="bg-emerald-500"],
+html:not(.dark) [class*="bg-rose-600"],
+html:not(.dark) [class*="bg-rose-500"],
+html:not(.dark) [class*="bg-blue-600"],
+html:not(.dark) [class*="bg-violet-600"],
+html:not(.dark) [class*="bg-purple-600"],
+html:not(.dark) [class*="bg-amber-600"],
+html:not(.dark) [class*="bg-red-600"],
+html:not(.dark) [class*="bg-teal-600"],
+html.light [class*="bg-indigo-600"],
+html.light [class*="bg-indigo-500"],
+html.light [class*="bg-emerald-600"],
+html.light [class*="bg-emerald-500"],
+html.light [class*="bg-rose-600"],
+html.light [class*="bg-rose-500"],
+html.light [class*="bg-blue-600"],
+html.light [class*="bg-violet-600"],
+html.light [class*="bg-purple-600"],
+html.light [class*="bg-amber-600"],
+html.light [class*="bg-red-600"],
+html.light [class*="bg-teal-600"] {
+  color: #ffffff !important;
+}
+
+html:not(.dark) [class*="bg-indigo-600"] *,
+html:not(.dark) [class*="bg-emerald-600"] *,
+html:not(.dark) [class*="bg-rose-600"] *,
+html:not(.dark) [class*="bg-blue-600"] *,
+html.light [class*="bg-indigo-600"] *,
+html.light [class*="bg-emerald-600"] *,
+html.light [class*="bg-rose-600"] *,
+html.light [class*="bg-blue-600"] * {
+  color: #ffffff !important;
+}
+
+/* Preserve authentic dark terminal & Monaco-style code editors in Coding Lab */
+html:not(.dark) .preserve-dark-surface,
+html:not(.dark) .preserve-dark-surface [class*="bg-slate-900"],
+html:not(.dark) .preserve-dark-surface [class*="bg-slate-950"],
+html.light .preserve-dark-surface,
+html.light .preserve-dark-surface [class*="bg-slate-900"],
+html.light .preserve-dark-surface [class*="bg-slate-950"] {
+  background-color: #0b0f19 !important;
+}
+
+html:not(.dark) .preserve-dark-surface textarea,
+html.light .preserve-dark-surface textarea {
+  background-color: #0b0f19 !important;
+  color: #e2e8f0 !important;
+}
+
+html:not(.dark) .preserve-dark-surface [class*="text-slate-"],
+html.light .preserve-dark-surface [class*="text-slate-"] {
+  color: #cbd5e1 !important;
 }
 
 /* Custom scrollbars */

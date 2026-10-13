@@ -117,19 +117,19 @@ export const ExamPage = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 animate-in fade-in">
       {/* Exam Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             Midterm Exam Simulator
           </h2>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-600 dark:text-slate-400">
             {currentCourse?.title || 'Operating Systems'} • Strict time constraint simulation
           </span>
         </div>
 
         {examStarted && !isSubmitted && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 font-mono text-sm font-bold animate-pulse">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-mono text-sm font-bold animate-pulse">
             <Clock className="w-4 h-4" />
             <span>{formatTimer(timeLeft)}</span>
           </div>
@@ -137,27 +137,27 @@ export const ExamPage = () => {
       </div>
 
       {!examStarted ? (
-        <div className="p-8 rounded-2xl bg-slate-900/80 border border-slate-800 text-center space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto">
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
             <GraduationCap className="w-8 h-8" />
           </div>
 
           <div className="space-y-2 max-w-md mx-auto">
-            <h3 className="text-lg font-bold text-white">Ready for the Exam Simulation?</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Ready for the Exam Simulation?</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               This simulator mimics real midterm exam conditions. You have 15 minutes to solve calibrated multiple choice problems spanning Coffman conditions, Safe States, and Banker's Algorithm.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto text-xs font-medium text-slate-300">
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-              <span className="block font-bold text-white">3</span> Questions
+          <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto text-xs font-medium text-slate-700 dark:text-slate-300">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              <span className="block font-bold text-slate-900 dark:text-white">3</span> Questions
             </div>
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-              <span className="block font-bold text-white">15</span> Minutes
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              <span className="block font-bold text-slate-900 dark:text-white">15</span> Minutes
             </div>
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-              <span className="block font-bold text-white">80%</span> Target Pass
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              <span className="block font-bold text-slate-900 dark:text-white">80%</span> Target Pass
             </div>
           </div>
 
@@ -166,26 +166,26 @@ export const ExamPage = () => {
               setExamStarted(true);
               setTimeLeft(900);
             }}
-            className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg transition-all"
+            className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg transition-all cursor-pointer"
           >
             Start Exam Timer
           </button>
         </div>
       ) : !isSubmitted ? (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
           {/* Question Navigation Bar */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
             <div className="flex gap-2">
               {EXAM_QUESTIONS.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}
-                  className={`w-7 h-7 rounded-lg text-xs font-mono font-bold transition-all ${
+                  className={`w-7 h-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                     currentIndex === idx
                       ? 'bg-indigo-600 text-white'
                       : answers[idx]
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   {idx + 1}
@@ -193,14 +193,14 @@ export const ExamPage = () => {
               ))}
             </div>
 
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               Answered {Object.keys(answers).length} of {EXAM_QUESTIONS.length}
             </span>
           </div>
 
           {/* Current Question */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-white leading-relaxed">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white leading-relaxed">
               {currentQ.question}
             </h3>
 
@@ -211,17 +211,17 @@ export const ExamPage = () => {
                   <button
                     key={opt.id}
                     onClick={() => handleSelectAnswer(opt.id)}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left text-xs transition-all ${
+                    className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left text-xs transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-indigo-500 bg-indigo-600/20 text-white'
-                        : 'border-slate-800 bg-slate-950/40 text-slate-300 hover:border-slate-700'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-600/20 text-indigo-950 dark:text-white ring-1 ring-indigo-500 font-bold'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/40 text-slate-800 dark:text-slate-300 hover:border-indigo-400 hover:bg-white dark:hover:bg-slate-950/80'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-mono font-bold text-slate-200 shrink-0">
+                      <span className="w-6 h-6 rounded-lg bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-slate-900 dark:text-slate-200 shrink-0">
                         {opt.id}
                       </span>
-                      <span>{opt.text}</span>
+                      <span className="leading-relaxed">{opt.text}</span>
                     </div>
                   </button>
                 );
@@ -230,11 +230,11 @@ export const ExamPage = () => {
           </div>
 
           {/* Action Footer */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <button
               onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
               disabled={currentIndex === 0}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 disabled:opacity-30"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
             >
               Previous
             </button>
@@ -242,14 +242,14 @@ export const ExamPage = () => {
             {currentIndex < EXAM_QUESTIONS.length - 1 ? (
               <button
                 onClick={() => setCurrentIndex(prev => prev + 1)}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer"
               >
                 Next Question
               </button>
             ) : (
               <button
                 onClick={handleSubmitExam}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md"
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md cursor-pointer"
               >
                 Submit Exam
               </button>
@@ -258,26 +258,26 @@ export const ExamPage = () => {
         </div>
       ) : (
         /* Results Card */
-        <div className="p-8 rounded-2xl bg-slate-900/80 border border-slate-800 text-center space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
             <Award className="w-8 h-8" />
           </div>
 
           <div className="space-y-1">
-            <h3 className="text-xl font-bold text-white">Exam Simulation Complete!</h3>
-            <p className="text-xs text-slate-400">Readiness: <strong className="text-indigo-400">{examResults?.readiness}</strong></p>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Exam Simulation Complete!</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Readiness: <strong className="text-indigo-600 dark:text-indigo-400">{examResults?.readiness}</strong></p>
           </div>
 
-          <div className="text-4xl font-extrabold text-white font-mono">
+          <div className="text-4xl font-extrabold text-slate-900 dark:text-white font-mono">
             {examResults?.scorePct}%
           </div>
 
-          <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto text-xs font-semibold text-slate-300">
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-              Correct: <span className="text-emerald-400">{examResults?.correct}</span> / {examResults?.total}
+          <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              Correct: <span className="text-emerald-600 dark:text-emerald-400">{examResults?.correct}</span> / {examResults?.total}
             </div>
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-              XP Earned: <span className="text-indigo-400">+120 XP</span>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              XP Earned: <span className="text-indigo-600 dark:text-indigo-400">+120 XP</span>
             </div>
           </div>
 
@@ -287,7 +287,7 @@ export const ExamPage = () => {
               setIsSubmitted(false);
               setAnswers({});
             }}
-            className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md"
+            className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md cursor-pointer"
           >
             Retake Exam Simulation
           </button>

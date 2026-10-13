@@ -173,24 +173,24 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 animate-in fade-in">
       {/* Assessment Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             Adaptive Diagnostic & Calibration Quiz
           </h2>
-          <span className="text-xs text-slate-400">
-            Topic: <strong className="text-slate-200">{currentQ?.topic || 'Deadlocks'}</strong> • Concept: <strong className="text-indigo-400">{currentQ?.concept || "Banker's Algorithm"}</strong>
+          <span className="text-xs text-slate-600 dark:text-slate-400">
+            Topic: <strong className="text-slate-900 dark:text-slate-200">{currentQ?.topic || 'Deadlocks'}</strong> • Concept: <strong className="text-indigo-600 dark:text-indigo-400">{currentQ?.concept || "Banker's Algorithm"}</strong>
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
+          <span className="text-xs font-mono px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold">
             Question {currentIndex + 1} of {questions.length}
           </span>
           <button
             onClick={loadQuestions}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Reset Quiz"
           >
             <RefreshCw className="w-4 h-4" />
@@ -199,13 +199,13 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
       </div>
 
       {currentQ && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
           {/* Question Text */}
           <div className="space-y-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-400 font-semibold">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-bold">
               Multiple Choice Problem
             </span>
-            <h3 className="text-base font-semibold text-white leading-relaxed">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white leading-relaxed">
               {currentQ.question}
             </h3>
           </div>
@@ -215,16 +215,16 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
             {currentQ.options.map((opt) => {
               const isSelected = selectedOption === opt.id;
               const isCorrect = opt.id === currentQ.correct_option;
-              let btnClass = 'border-slate-800 bg-slate-950/40 text-slate-300 hover:border-slate-700 hover:bg-slate-950/80';
+              let btnClass = 'border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/40 text-slate-800 dark:text-slate-300 hover:border-indigo-400 hover:bg-white dark:hover:bg-slate-950/80';
 
               if (isSubmitted) {
                 if (isCorrect) {
-                  btnClass = 'border-emerald-500 bg-emerald-500/10 text-emerald-300';
+                  btnClass = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold';
                 } else if (isSelected && !isCorrect) {
-                  btnClass = 'border-rose-500 bg-rose-500/10 text-rose-300';
+                  btnClass = 'border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300 font-semibold';
                 }
               } else if (isSelected) {
-                btnClass = 'border-indigo-500 bg-indigo-600/20 text-white shadow-sm';
+                btnClass = 'border-indigo-600 bg-indigo-50 dark:bg-indigo-600/20 text-indigo-950 dark:text-white shadow-sm ring-2 ring-indigo-500/40 font-bold';
               }
 
               return (
@@ -235,17 +235,17 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
                   className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left text-xs transition-all ${btnClass}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-mono font-bold text-slate-200 shrink-0">
+                    <span className="w-6 h-6 rounded-lg bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-slate-900 dark:text-slate-200 shrink-0">
                       {opt.id}
                     </span>
-                    <span>{opt.text}</span>
+                    <span className="leading-relaxed">{opt.text}</span>
                   </div>
 
                   {isSubmitted && isCorrect && (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   )}
                   {isSubmitted && isSelected && !isCorrect && (
-                    <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                   )}
                 </button>
               );
@@ -253,12 +253,12 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
           </div>
 
           {/* Submission and Action Buttons */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
             {!isSubmitted ? (
               <button
                 onClick={handleSubmitAnswer}
                 disabled={!selectedOption}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold shadow-md transition-all ml-auto"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold shadow-md transition-all ml-auto cursor-pointer"
               >
                 Submit Answer
               </button>
@@ -266,13 +266,13 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
               <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {selectedOption === currentQ.correct_option ? (
-                    <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4" /> Correct! Mastery increased +8%
                     </span>
                   ) : (
                     <button
                       onClick={() => setShowWhyWrongModal(true)}
-                      className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition-colors"
                     >
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>Why Was I Wrong?</span>
@@ -283,13 +283,13 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
                 {currentIndex < questions.length - 1 ? (
                   <button
                     onClick={handleNextQuestion}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md flex items-center gap-2 transition-all"
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md flex items-center gap-2 transition-all cursor-pointer"
                   >
                     <span>Next Question</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
-                  <div className="text-xs font-semibold text-indigo-400">
+                  <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                     Quiz Complete! Score: {scoreCount} / {questions.length}
                   </div>
                 )}
@@ -302,34 +302,34 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
       {/* "Why Was I Wrong?" Diagnostic Modal */}
       {showWhyWrongModal && currentQ && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-rose-400">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
                 <AlertTriangle className="w-5 h-5" />
-                <h3 className="text-sm font-bold text-white">Why Was I Wrong? Diagnostic Analysis</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Why Was I Wrong? Diagnostic Analysis</h3>
               </div>
               <button
                 onClick={() => setShowWhyWrongModal(false)}
-                className="text-slate-400 hover:text-white text-xs font-mono"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs font-mono"
               >
                 ✕
               </button>
             </div>
 
             {/* Misconception Card */}
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-1">
-              <span className="text-[11px] font-bold text-rose-400 block uppercase tracking-wider">
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 space-y-1">
+              <span className="text-[11px] font-bold text-rose-700 dark:text-rose-400 block uppercase tracking-wider">
                 Detected Cognitive Misconception:
               </span>
-              <p className="text-xs text-slate-200 leading-relaxed">
+              <p className="text-xs text-rose-950 dark:text-slate-200 leading-relaxed">
                 "{currentQ.misconception || 'Confuses potential deadlock states with actual deadlock execution.'}"
               </p>
             </div>
 
             {/* Explanation & Remediation */}
-            <div className="space-y-1.5 text-xs text-slate-300">
-              <span className="font-bold text-white block">Explanation & Grounded Proof:</span>
-              <p className="text-slate-400 leading-relaxed font-sans">
+            <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+              <span className="font-bold text-slate-900 dark:text-white block">Explanation & Grounded Proof:</span>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-sans">
                 {currentQ.explanation}
               </p>
             </div>
@@ -337,19 +337,19 @@ export const AssessmentsPage = ({ onAskTutorAboutMistake }) => {
             {/* Source Evidence Citation */}
             {currentQ.citation && (
               <div className="space-y-1">
-                <span className="text-[11px] font-bold text-indigo-400 block">Course Source Evidence:</span>
+                <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block">Course Source Evidence:</span>
                 <SourceCitation citation={currentQ.citation} />
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="pt-3 border-t border-slate-800 flex justify-end gap-3">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
               <button
                 onClick={() => {
                   setShowWhyWrongModal(false);
                   if (onAskTutorAboutMistake) onAskTutorAboutMistake(currentQ);
                 }}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md flex items-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Explain in Socratic Tutor</span>

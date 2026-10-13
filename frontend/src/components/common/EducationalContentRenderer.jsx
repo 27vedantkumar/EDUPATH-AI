@@ -17,7 +17,7 @@ function renderInlineTokens(text = '') {
 
     if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
       return (
-        <strong key={idx} className="font-bold text-white">
+        <strong key={idx} className="font-bold text-slate-900 dark:text-white">
           {part.slice(2, -2)}
         </strong>
       );
@@ -25,7 +25,7 @@ function renderInlineTokens(text = '') {
 
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       return (
-        <em key={idx} className="italic text-indigo-200 font-medium">
+        <em key={idx} className="italic text-indigo-700 dark:text-indigo-200 font-medium">
           {part.slice(1, -1)}
         </em>
       );
@@ -35,7 +35,7 @@ function renderInlineTokens(text = '') {
       return (
         <code
           key={idx}
-          className="font-mono text-emerald-300 bg-slate-950/90 border border-slate-800 px-1.5 py-0.5 rounded"
+          className="font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-slate-950/90 border border-emerald-200 dark:border-slate-800 px-1.5 py-0.5 rounded"
         >
           {part.slice(1, -1)}
         </code>
@@ -60,9 +60,9 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
 
   if (!sanitized) {
     return (
-      <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-sm text-slate-200 space-y-2">
-        <div className="font-bold text-white">We couldn&apos;t fully read this material</div>
-        <p className="text-slate-300 leading-relaxed">
+      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-200 space-y-2">
+        <div className="font-bold text-slate-900 dark:text-white">We couldn&apos;t fully read this material</div>
+        <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
           Some parts of the uploaded material could not be interpreted correctly. Please try another file or upload a clearer version.
         </p>
       </div>
@@ -103,7 +103,7 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
       elements.push(
         <pre
           key={`code_${idx}`}
-          className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-emerald-300 overflow-x-auto leading-relaxed"
+          className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-sm text-emerald-400 overflow-x-auto leading-relaxed"
         >
           {codeLines.join('\n')}
         </pre>
@@ -125,10 +125,10 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
           elements.push(
             <div
               key={`ex_${idx}`}
-              className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-1.5"
+              className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-slate-950/70 border border-indigo-100 dark:border-slate-800/90 space-y-1.5"
             >
-              <div className="text-sm font-bold text-white">Example</div>
-              <div className="text-sm text-slate-200 leading-relaxed">
+              <div className="text-sm font-bold text-indigo-900 dark:text-white">Example</div>
+              <div className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
                 {renderInlineTokens(exampleBody)}
               </div>
             </div>
@@ -139,7 +139,7 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
       }
 
       elements.push(
-        <div key={`h_${idx}`} className="pt-2 first:pt-0 text-sm font-bold text-white">
+        <div key={`h_${idx}`} className="pt-2 first:pt-0 text-sm font-bold text-slate-900 dark:text-white">
           {headingText}
         </div>
       );
@@ -156,8 +156,8 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
           key={`term_${idx}`}
           className={
             isSourceLine
-              ? 'pt-2 text-sm italic text-slate-400 border-t border-slate-800/70'
-              : 'pt-1 text-sm italic text-indigo-200 font-medium'
+              ? 'pt-2 text-sm italic text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800/70'
+              : 'pt-1 text-sm italic text-indigo-700 dark:text-indigo-200 font-medium'
           }
         >
           {termText}
@@ -173,7 +173,7 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
       elements.push(
         <div
           key={`f_${idx}`}
-          className="px-3.5 py-2.5 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-sm text-emerald-300"
+          className="px-3.5 py-2.5 rounded-xl bg-emerald-50/70 dark:bg-slate-950/90 border border-emerald-200 dark:border-slate-800 font-mono text-sm text-emerald-800 dark:text-emerald-300"
         >
           {cleanFormula}
         </div>
@@ -186,7 +186,7 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
     if (/^[•\-]\s+/.test(line)) {
       const bulletBody = line.replace(/^[•\-]\s+/, '');
       elements.push(
-        <div key={`b_${idx}`} className="text-sm text-slate-200 leading-relaxed pl-3 border-l-2 border-slate-800">
+        <div key={`b_${idx}`} className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed pl-3 border-l-2 border-indigo-400 dark:border-slate-800">
           {renderInlineTokens(bulletBody)}
         </div>
       );
@@ -196,7 +196,7 @@ export const EducationalContentRenderer = ({ content = '', className = '' }) => 
 
     // Standard educational paragraph (consistent text-sm base scale)
     elements.push(
-      <p key={`p_${idx}`} className="text-sm text-slate-200 leading-relaxed">
+      <p key={`p_${idx}`} className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
         {renderInlineTokens(line)}
       </p>
     );

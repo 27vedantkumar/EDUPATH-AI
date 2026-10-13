@@ -75,18 +75,18 @@ export const SourceExplorerPage = ({
   return (
     <div className="flex h-[calc(100vh-4rem)] max-w-7xl mx-auto p-6 gap-6 animate-in fade-in">
       {/* Left Tree Navigator */}
-      <div className="w-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col shrink-0">
-        <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800">
+      <div className="w-80 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col shrink-0">
+        <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <FolderTree className="w-4 h-4 text-indigo-400" />
-            <h2 className="text-xs font-bold text-white uppercase tracking-wider">
+            <FolderTree className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
               Source Addressable KB
             </h2>
           </div>
           {onOpenUpload && (
             <button
               onClick={onOpenUpload}
-              className="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold flex items-center gap-1"
+              className="px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
             >
               <Upload className="w-3 h-3" />
               <span>Ingest</span>
@@ -106,23 +106,23 @@ export const SourceExplorerPage = ({
                       setSelectedUnit(doc.units[0]);
                     }
                   }}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold transition-all ${
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs font-semibold transition-all cursor-pointer ${
                     isDocSelected
-                      ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
-                      : 'text-slate-300 hover:bg-slate-950/60 hover:text-white'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950/60 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
                     {getDocIcon(doc.file_type)}
                     <span className="truncate">{doc.filename}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-1">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono shrink-0 ml-1">
                     {doc.units?.length || 0} units
                   </span>
                 </button>
 
                 {isDocSelected && doc.units && (
-                  <div className="pl-4 space-y-1 border-l border-slate-800 ml-2">
+                  <div className="pl-4 space-y-1 border-l border-slate-200 dark:border-slate-800 ml-2">
                     {doc.units.map((unit) => {
                       const isUnitSelected = selectedUnit?.id === unit.id;
                       return (
@@ -132,15 +132,15 @@ export const SourceExplorerPage = ({
                             setSelectedUnit(unit);
                             setPlayingBanner(null);
                           }}
-                          className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-[11px] transition-all ${
+                          className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-[11px] transition-all cursor-pointer ${
                             isUnitSelected
-                              ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
-                              : 'text-slate-400 hover:bg-slate-950/40 hover:text-slate-200'
+                              ? 'bg-indigo-50 dark:bg-indigo-600/20 text-indigo-900 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 font-semibold'
+                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-950/40 hover:text-slate-900 dark:hover:text-slate-200'
                           }`}
                         >
                           <span className="truncate">{unit.location_label}</span>
                           {unit.source?.timestamp_formatted && (
-                            <span className="text-[10px] font-mono text-rose-400 flex items-center gap-0.5 shrink-0">
+                            <span className="text-[10px] font-mono text-rose-500 dark:text-rose-400 flex items-center gap-0.5 shrink-0">
                               <Play className="w-2.5 h-2.5" />
                               {unit.source.timestamp_formatted}
                             </span>
@@ -157,20 +157,20 @@ export const SourceExplorerPage = ({
       </div>
 
       {/* Right Content Viewer */}
-      <div className="flex-1 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between overflow-y-auto">
+      <div className="flex-1 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between overflow-y-auto">
         {selectedUnit ? (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 uppercase">
                     {selectedDoc?.file_type}
                   </span>
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                     {selectedDoc?.filename}
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   {selectedUnit.location_label}
                 </h3>
               </div>
@@ -183,7 +183,7 @@ export const SourceExplorerPage = ({
                     initialQuery: `Explain "${selectedUnit.location_label}" from ${selectedDoc?.filename} in detail and highlight its key takeaways.`
                   })
                 }
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Ask AI Tutor About This</span>
@@ -192,17 +192,17 @@ export const SourceExplorerPage = ({
 
             {/* Video Timestamp Player Banner if video segment */}
             {selectedUnit.source?.timestamp_start !== undefined && (
-              <div className="p-4 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-rose-200 dark:border-rose-500/30 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
-                      <Play className="w-5 h-5 fill-rose-400" />
+                    <div className="w-10 h-10 rounded-lg bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                      <Play className="w-5 h-5 fill-rose-600 dark:fill-rose-400" />
                     </div>
                     <div>
-                      <span className="text-xs font-bold text-white block">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white block">
                         Video Timestamp Target: {selectedUnit.source.timestamp_formatted || '21:43'}
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         Exact seek offset: {selectedUnit.source.timestamp_start}s • Indexed Speech-to-Text Segment
                       </span>
                     </div>
@@ -213,7 +213,7 @@ export const SourceExplorerPage = ({
                         `Playing ${selectedDoc?.filename} seeked directly to ${selectedUnit.source.timestamp_formatted || '21:43'} (${selectedUnit.source.timestamp_start}s)`
                       )
                     }
-                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-sm"
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-sm cursor-pointer"
                   >
                     Play at Timestamp
                   </button>

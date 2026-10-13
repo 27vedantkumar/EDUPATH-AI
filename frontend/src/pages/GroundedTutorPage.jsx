@@ -547,10 +547,10 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
                 <button
                   key={mode.id}
                   onClick={() => handleModeSelect(mode.id)}
-                  className={`p-2 rounded-xl text-left border transition-all ${
+                  className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      ? 'bg-indigo-50 dark:bg-indigo-600/20 border-indigo-600 dark:border-indigo-500 text-indigo-950 dark:text-white shadow-sm font-bold ring-1 ring-indigo-500/30'
+                      : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:border-indigo-400'
                   }`}
                 >
                   <div className="text-xs font-semibold flex items-center justify-between">
@@ -621,12 +621,12 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
                     className={`max-w-3xl rounded-2xl p-4 text-xs leading-relaxed ${
                       isUser
                         ? 'bg-indigo-600 text-white shadow-md'
-                        : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-sm w-full'
+                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 shadow-sm w-full'
                     }`}
                   >
                     {/* Assistant Grounding, Intent, Per-Message Brief/Explanation Switcher & Controls */}
                     {!isUser && msg.status && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-800">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-200 dark:border-slate-800">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {msg.status === 'SUPPORTED' && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
