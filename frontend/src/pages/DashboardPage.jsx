@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 
-export const DashboardPage = ({ onNavigate }) => {
+export const DashboardPage = ({ onNavigate, onNavigateWithContext }) => {
   const { user, currentCourse } = useAuth();
   const { themeConfig, isNight } = useTheme();
   const [profile, setProfile] = useState(null);
@@ -287,7 +287,19 @@ export const DashboardPage = ({ onNavigate }) => {
 
               {/* Start 5-min remediation button with crisp black border as in PDF */}
               <button
-                onClick={() => onNavigate('tutor')}
+                onClick={() => {
+                  const remediationContext = {
+                    scopedDocument: 'Operating_Systems_Ch7_Deadlocks.pdf',
+                    mode: 'exam',
+                    initialQuery:
+                      "Start a 5-minute targeted remediation on Banker's Algorithm & Safe States: Revisit Slide 18 of Lecture 7, explain the core distinction between an Unsafe State and Deadlock, and guide me through 3 targeted practice questions."
+                  };
+                  if (onNavigateWithContext) {
+                    onNavigateWithContext('tutor', remediationContext);
+                  } else {
+                    onNavigate('tutor');
+                  }
+                }}
                 style={{ backgroundColor: themeConfig.remediationBtnBg }}
                 className="shrink-0 px-4 py-2.5 rounded-xl border-[1.5px] border-slate-900 text-slate-950 font-bold text-xs shadow-sm hover:brightness-95 transition-all cursor-pointer"
               >
@@ -299,7 +311,16 @@ export const DashboardPage = ({ onNavigate }) => {
           {/* 3 Calibrated Steps */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div
-              onClick={() => onNavigate('sources')}
+              onClick={() => {
+                if (onNavigateWithContext) {
+                  onNavigateWithContext('sources', {
+                    document: 'Operating_Systems_Ch7_Deadlocks.pdf',
+                    targetPage: 18
+                  });
+                } else {
+                  onNavigate('sources');
+                }
+              }}
               style={{
                 backgroundColor: themeConfig.bgCanvas,
                 borderColor: themeConfig.borderCard

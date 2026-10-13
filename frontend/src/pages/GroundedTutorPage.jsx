@@ -212,12 +212,15 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
     fetchDocs();
   }, [currentCourse, refreshTrigger]);
 
-  // Handle incoming context when user clicks "Teach Me This", "Smart Exam Mentor", or "Ask AI Tutor"
+  // Handle incoming context when user clicks "Teach Me This", "Smart Exam Mentor", "Start 5-min remediation", or "Ask AI Tutor"
   useEffect(() => {
     if (initialContext) {
       const targetScope = initialContext.scopedDocument || '';
       if (targetScope) {
         setScopedDocument(targetScope);
+      }
+      if (initialContext.mode) {
+        setSelectedMode(initialContext.mode);
       }
       if (initialContext.openAdaptiveStudio) {
         setStudioTopic(initialContext.customTopic || '');
@@ -387,7 +390,17 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
   };
 
   // Compute informational learning metrics (Section 7 — never usage limits!)
-  const activeLearningSession = AdaptivePhaseEngine.getSession();
+  const activeLearningSession = (() => {
+    try {
+      return (
+        AdaptivePhaseEngine.getActiveSession?.() ||
+        AdaptivePhaseEngine.getSession?.() ||
+        null
+      );
+    } catch (_) {
+      return null;
+    }
+  })();
   const currentPhaseLabel = activeLearningSession
     ? `Phase ${activeLearningSession.currentPhaseNumber || 1}`
     : 'Phase 1';

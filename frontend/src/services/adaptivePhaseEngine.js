@@ -102,6 +102,13 @@ export class AdaptivePhaseEngine {
   }
 
   /**
+   * Safe alias for getActiveSession ensuring backward compatibility
+   */
+  static getSession() {
+    return this.getActiveSession();
+  }
+
+  /**
    * Analyze material / topic and dynamically generate a 3-Phase Adaptive Learning Session.
    */
   static createOrLoadSession({ documentName = '', customTopic = '' } = {}) {

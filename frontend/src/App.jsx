@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { IngestionModal } from './components/common/IngestionModal';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 import { DashboardPage } from './pages/DashboardPage';
 import { GroundedTutorPage } from './pages/GroundedTutorPage';
@@ -36,7 +37,12 @@ const AppContent = () => {
   const renderActivePage = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <DashboardPage onNavigate={setCurrentTab} />;
+        return (
+          <DashboardPage
+            onNavigate={setCurrentTab}
+            onNavigateWithContext={handleNavigateWithContext}
+          />
+        );
       case 'tutor':
         return (
           <GroundedTutorPage
@@ -116,7 +122,9 @@ const AppContent = () => {
         <Sidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
 
         <main className="flex-1 overflow-y-auto">
-          {renderActivePage()}
+          <ErrorBoundary onReset={() => setCurrentTab('dashboard')}>
+            {renderActivePage()}
+          </ErrorBoundary>
         </main>
       </div>
 

@@ -81,7 +81,10 @@ export const api = {
     } catch (sessionErr) {
       console.warn('AdaptivePhaseEngine session synthesis warning:', sessionErr);
       try {
-        learningSession = AdaptivePhaseEngine.getSession();
+        learningSession =
+          AdaptivePhaseEngine.getActiveSession?.() ||
+          AdaptivePhaseEngine.getSession?.() ||
+          null;
       } catch (_) {}
     }
 
