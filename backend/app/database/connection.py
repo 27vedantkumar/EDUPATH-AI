@@ -42,10 +42,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 async def init_db() -> None:
-    """Idempotently create all tables."""
+    """Idempotently create all tables and apply non-destructive schema migrations."""
     # Import all models here so that Base.metadata has all table definitions
     from backend.app.models import entities  # noqa: F401
     async with engine.begin() as conn:
         logger.info("Verifying and initializing all database tables...")
         await conn.run_sync(Base.metadata.create_all)
+
+        # Safe non-destructive column migrations for SQLite / existing databases
+        if "sqlite" in settings.DATABASE_URL:
+            def migrate_sqlite_columns(connection):
+                try:
+                    cursor = connection.connection.cursor()
+                    cursor.execute("PRAGMA table_info(users)")
+                    columns = [col[1] for col in cursor.fetchall()]
+                    if "email_verified_at" not in columns:
+                        cursor.execute("ALTER TABLE users ADD COLUMN email_verified_at DATETIME")
+                    if "account_status" not in columns:
+                        cursor.execute("ALTER TABLE users ADD COLUMN account_status VARCHAR(32) DEFAULT 'ACTIVE'")
+                    if "last_login_at" not in columns:
+                        cursor.execute("ALTER TABLE users ADD COLUMN last_login_at DATETIME")
+                except Exception as mig_err:
+                    logger.warning(f"SQLite migration notice: {mig_err}")
+
+            await conn.run_sync(migrate_sqlite_columns)
+
         logger.info("Database tables initialized successfully.")

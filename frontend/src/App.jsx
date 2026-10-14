@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth, AuthState } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { IngestionModal } from './components/common/IngestionModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { AuthPage } from './pages/AuthPage';
+import { Sparkles } from 'lucide-react';
 
 import { DashboardPage } from './pages/DashboardPage';
 import { GroundedTutorPage } from './pages/GroundedTutorPage';
@@ -19,6 +21,7 @@ import { GamesPage } from './pages/GamesPage';
 
 const AppContent = () => {
   const { themeConfig } = useTheme();
+  const { authState, isAuthenticated } = useAuth();
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -110,6 +113,35 @@ const AppContent = () => {
         return <DashboardPage onNavigate={setCurrentTab} />;
     }
   };
+
+  if (authState === AuthState.AUTH_LOADING) {
+    return (
+      <div
+        style={{ backgroundColor: themeConfig.bgCanvas }}
+        className="min-h-screen flex flex-col items-center justify-center font-sans transition-colors duration-200"
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center shadow-lg shadow-indigo-500/25 animate-pulse">
+            <Sparkles className="w-7 h-7 text-white" />
+          </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">EduPath AI</h1>
+            <span className="text-xs px-2 py-0.5 rounded-md font-mono font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+              v2026
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+            Initializing secure learning environment...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
 
   return (
     <div

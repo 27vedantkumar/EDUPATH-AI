@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Sparkles, Flame, Award, BookOpen, Upload, User, ShieldCheck, Sun, Moon, Palette } from 'lucide-react';
+import { Sparkles, Flame, Award, BookOpen, Upload, User, ShieldCheck, Sun, Moon, Palette, LogOut, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export const Navbar = ({ onOpenUpload }) => {
-  const { user, currentCourse, courses, setCurrentCourse, isDemo } = useAuth();
+  const { user, currentCourse, courses, setCurrentCourse, isDemo, logout } = useAuth();
   const { theme, themeConfig, isNight, toggleDayNight, setTheme, themes } = useTheme();
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   return (
     <header
@@ -199,14 +200,96 @@ export const Navbar = ({ onOpenUpload }) => {
           <span>Level 6 · 1, 795 XP</span>
         </div>
 
-        {/* User Avatar Circle */}
-        <div className="flex items-center gap-2 pl-1">
-          <div className="w-8 h-8 rounded-full bg-[#fca5a5] text-slate-950 font-bold text-xs flex items-center justify-center border border-slate-900 shadow-sm">
-            AR
-          </div>
-          <span className="text-xs font-bold text-slate-900 dark:text-slate-200 hidden lg:inline">
-            Alex Rivera
-          </span>
+        {/* User Profile & Account Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="flex items-center gap-2 pl-1 cursor-pointer focus:outline-none group"
+            title="Account & Session Menu"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#fca5a5] text-slate-950 font-bold text-xs flex items-center justify-center border border-slate-900 shadow-sm group-hover:scale-105 transition-transform">
+              {(() => {
+                const name = user?.full_name || user?.name || (isDemo ? 'Alex Rivera' : 'Learner');
+                const parts = name.trim().split(/\s+/);
+                return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : name.slice(0, 2).toUpperCase();
+              })()}
+            </div>
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-200 hidden lg:inline">
+              {user?.full_name || user?.name || (isDemo ? 'Alex Rivera' : 'Learner')}
+            </span>
+          </button>
+
+          {showProfileMenu && (
+            <div
+              style={{ backgroundColor: themeConfig.bgCard, borderColor: themeConfig.borderCard }}
+              className="absolute right-0 mt-2 w-72 rounded-2xl border shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 space-y-3"
+            >
+              {/* Header profile info */}
+              <div className="flex items-start gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-10 h-10 rounded-full bg-[#fca5a5] text-slate-950 font-bold text-sm flex items-center justify-center border border-slate-900 shadow-sm flex-shrink-0">
+                  {(() => {
+                    const name = user?.full_name || user?.name || (isDemo ? 'Alex Rivera' : 'Learner');
+                    const parts = name.trim().split(/\s+/);
+                    return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : name.slice(0, 2).toUpperCase();
+                  })()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {user?.full_name || user?.name || (isDemo ? 'Alex Rivera' : 'Learner')}
+                    </p>
+                    {(user?.email_verified_at || isDemo) && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    {user?.email || (isDemo ? 'alex.rivera@stanford.edu' : '')}
+                  </p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    {isDemo ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        ⚡ Hackathon Judge Mode
+                      </span>
+                    ) : user?.email_verified_at ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        ✓ Verified Account
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                        Pending Verification
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status details */}
+              <div className="text-[11px] space-y-1 text-slate-600 dark:text-slate-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Current Course:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{currentCourse?.code || 'CS301'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Auth Method:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{isDemo ? '1-Click Evaluator' : 'Secure Email Cookie'}</span>
+                </div>
+              </div>
+
+              {/* Sign out button */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={async () => {
+                    setShowProfileMenu(false);
+                    await logout();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out / Switch Account</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

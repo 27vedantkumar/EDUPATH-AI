@@ -38,18 +38,20 @@ async function resilientFetch(url, options, fallbackFn) {
 export const api = {
   // Authentication
   async getDemoUser() {
-    return resilientFetch(`${API_BASE}/auth/demo`, {}, () => {
+    return resilientFetch(`${API_BASE}/auth/demo-login`, { method: 'POST' }, () => {
       const profile = ClientIntelligenceEngine.getStoredProfile();
       return {
+        status: 'DEMO_AUTHENTICATED',
         user: {
           id: 'demo_alex_rivera',
           username: 'alex_rivera',
           full_name: 'Alex Rivera',
           email: 'alex.rivera@edupath.ai',
           avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
-          is_demo_user: true
-        },
-        profile: profile
+          is_demo_user: true,
+          email_verified: true,
+          profile: profile
+        }
       };
     });
   },
@@ -59,7 +61,103 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
-    }, () => this.getDemoUser());
+    }, () => {
+      // Local fallback for offline/GitHub Pages demo environment
+      if (username.toLowerCase().includes('alex') || username.toLowerCase().includes('demo')) {
+        return this.getDemoUser();
+      }
+      return {
+        status: 'AUTHENTICATED',
+        user: {
+          id: `user_${Date.now()}`,
+          username: username.split('@')[0],
+          email: username.includes('@') ? username : `${username}@student.edupath.ai`,
+          full_name: username.split('@')[0],
+          is_demo_user: false,
+          email_verified: true,
+          profile: ClientIntelligenceEngine.getStoredProfile()
+        }
+      };
+    });
+  },
+
+  async register({ email, password, full_name, username }) {
+    return resilientFetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, full_name, username })
+    }, () => {
+      // Local simulation for offline/GitHub Pages static host
+      const rawToken = `tok_${Date.now()}`;
+      return {
+        status: 'VERIFICATION_REQUIRED',
+        message: 'Account created successfully! Please verify your email to unlock access.',
+        email: email,
+        dev_verification_link: `/verify-email?token=${rawToken}&email=${email}`
+      };
+    });
+  },
+
+  async verifyEmail(token) {
+    return resilientFetch(`${API_BASE}/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    }, () => ({
+      status: 'EMAIL_VERIFIED',
+      message: 'Email address verified successfully. You may now sign in.'
+    }));
+  },
+
+  async resendVerification(email) {
+    return resilientFetch(`${API_BASE}/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    }, () => ({
+      status: 'CHALLENGE_DISPATCHED',
+      message: 'If an unverified account exists, a new verification link has been sent.'
+    }));
+  },
+
+  async forgotPassword(email) {
+    return resilientFetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    }, () => ({
+      status: 'RESET_DISPATCHED',
+      message: 'If an account exists with this email, password reset instructions have been sent.'
+    }));
+  },
+
+  async resetPassword(token, newPassword) {
+    return resilientFetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password: newPassword })
+    }, () => ({
+      status: 'PASSWORD_RESET_SUCCESS',
+      message: 'Your password has been reset successfully. Please sign in.'
+    }));
+  },
+
+  async logout() {
+    return resilientFetch(`${API_BASE}/auth/logout`, { method: 'POST' }, () => ({
+      status: 'LOGGED_OUT'
+    }));
+  },
+
+  async getCurrentUser() {
+    return resilientFetch(`${API_BASE}/auth/me`, {}, () => {
+      const stored = localStorage.getItem('edupath_authenticated_user_v1');
+      if (stored) {
+        try {
+          return { status: 'AUTHENTICATED', user: JSON.parse(stored) };
+        } catch (_) {}
+      }
+      return { status: 'UNAUTHENTICATED', user: null };
+    });
   },
 
   // Courses & Ingestion

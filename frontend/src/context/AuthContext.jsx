@@ -8,6 +8,8 @@ export const AuthState = {
   DEMO_AUTHENTICATED: 'DEMO_AUTHENTICATED',
 };
 
+const STORAGE_KEY_AUTH_USER = 'edupath_authenticated_user_v1';
+
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -23,30 +25,54 @@ export const AuthProvider = ({ children }) => {
   const initAuth = async () => {
     try {
       setAuthState(AuthState.AUTH_LOADING);
-      // Automatically provision or restore demo profile for hackathon showcase
-      const demoData = await api.getDemoUser();
-      if (demoData && demoData.user) {
-        setUser({
-          ...demoData.user,
-          profile: demoData.profile || {
-            overall_mastery: 0.62,
-            level: 4,
-            xp_points: 1240,
-            current_streak_days: 7,
-          }
-        });
-        setAuthState(AuthState.DEMO_AUTHENTICATED);
+
+      // 1. Check for active backend session (via HTTP-only cookie or current user)
+      const sessionRes = await api.getCurrentUser().catch(() => null);
+      if (sessionRes && sessionRes.user) {
+        setUser(sessionRes.user);
+        setAuthState(
+          sessionRes.user.is_demo_user ? AuthState.DEMO_AUTHENTICATED : AuthState.AUTHENTICATED
+        );
+        localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(sessionRes.user));
       } else {
-        setAuthState(AuthState.UNAUTHENTICATED);
+        // 2. Check local storage session fallback
+        const stored = localStorage.getItem(STORAGE_KEY_AUTH_USER);
+        if (stored) {
+          try {
+            const parsedUser = JSON.parse(stored);
+            if (parsedUser && parsedUser.id) {
+              setUser(parsedUser);
+              setAuthState(
+                parsedUser.is_demo_user ? AuthState.DEMO_AUTHENTICATED : AuthState.AUTHENTICATED
+              );
+            } else {
+              setAuthState(AuthState.UNAUTHENTICATED);
+            }
+          } catch (_) {
+            setAuthState(AuthState.UNAUTHENTICATED);
+          }
+        } else {
+          // Unauthenticated state by default (prompts user to sign in, register, or click 1-Click Demo)
+          setAuthState(AuthState.UNAUTHENTICATED);
+        }
       }
 
-      // Fetch active courses
+      // Load active courses
+      await loadCourses();
+    } catch (err) {
+      console.warn('Authentication check failed:', err);
+      setAuthState(AuthState.UNAUTHENTICATED);
+      await loadCourses();
+    }
+  };
+
+  const loadCourses = async () => {
+    try {
       const courseList = await api.listCourses();
       if (Array.isArray(courseList) && courseList.length > 0) {
         setCourses(courseList);
         setCurrentCourse(courseList[0]);
       } else {
-        // Fallback default course
         const defaultCourse = {
           id: 'OS_101',
           code: 'OS_101',
@@ -56,22 +82,7 @@ export const AuthProvider = ({ children }) => {
         setCourses([defaultCourse]);
         setCurrentCourse(defaultCourse);
       }
-    } catch (err) {
-      console.warn('Backend offline or initializing; activating demo fallback profile:', err);
-      setUser({
-        id: 'demo-user-1',
-        username: 'alex_rivera',
-        full_name: 'Alex Rivera',
-        email: 'alex.rivera@edupath.ai',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
-        profile: {
-          overall_mastery: 0.62,
-          level: 4,
-          xp_points: 1240,
-          current_streak_days: 7,
-        }
-      });
-      setAuthState(AuthState.DEMO_AUTHENTICATED);
+    } catch (_) {
       const defaultCourse = {
         id: 'OS_101',
         code: 'OS_101',
@@ -83,28 +94,79 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginDemo = async () => {
-    await initAuth();
+  const login = async (username, password) => {
+    const res = await api.login(username, password);
+    if (res && res.user) {
+      setUser(res.user);
+      setAuthState(res.user.is_demo_user ? AuthState.DEMO_AUTHENTICATED : AuthState.AUTHENTICATED);
+      localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(res.user));
+      return res;
+    }
+    throw new Error(res?.detail || 'Invalid username or password.');
   };
 
-  const logout = () => {
-    setUser(null);
-    setAuthState(AuthState.UNAUTHENTICATED);
+  const register = async (payload) => {
+    return await api.register(payload);
+  };
+
+  const verifyEmail = async (token) => {
+    return await api.verifyEmail(token);
+  };
+
+  const resendVerification = async (email) => {
+    return await api.resendVerification(email);
+  };
+
+  const forgotPassword = async (email) => {
+    return await api.forgotPassword(email);
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    return await api.resetPassword(token, newPassword);
+  };
+
+  const loginDemo = async () => {
+    setAuthState(AuthState.AUTH_LOADING);
+    const demoData = await api.getDemoUser();
+    if (demoData && demoData.user) {
+      setUser(demoData.user);
+      setAuthState(AuthState.DEMO_AUTHENTICATED);
+      localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(demoData.user));
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await api.logout().catch(() => null);
+    } finally {
+      setUser(null);
+      localStorage.removeItem(STORAGE_KEY_AUTH_USER);
+      setAuthState(AuthState.UNAUTHENTICATED);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{
-      authState,
-      user,
-      setUser,
-      currentCourse,
-      setCurrentCourse,
-      courses,
-      loginDemo,
-      logout,
-      isDemo: authState === AuthState.DEMO_AUTHENTICATED,
-      isAuthenticated: authState === AuthState.AUTHENTICATED || authState === AuthState.DEMO_AUTHENTICATED
-    }}>
+    <AuthContext.Provider
+      value={{
+        authState,
+        user,
+        setUser,
+        currentCourse,
+        setCurrentCourse,
+        courses,
+        login,
+        register,
+        verifyEmail,
+        resendVerification,
+        forgotPassword,
+        resetPassword,
+        loginDemo,
+        logout,
+        isDemo: authState === AuthState.DEMO_AUTHENTICATED,
+        isAuthenticated:
+          authState === AuthState.AUTHENTICATED || authState === AuthState.DEMO_AUTHENTICATED,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

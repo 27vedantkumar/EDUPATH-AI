@@ -7,12 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from backend.app.config.settings import settings
-from backend.app.models.entities import User, LearnerProfile
+from backend.app.models.entities import User, LearnerProfile, EmailVerificationToken, PasswordResetToken
 
 logger = logging.getLogger("edupath.security.auth")
 
 import hashlib
 import os
+import secrets
 
 class AuthService:
     """
@@ -104,3 +105,91 @@ class AuthService:
             await db.commit()
 
         return demo_user
+
+    @classmethod
+    async def create_verification_challenge(cls, db: AsyncSession, user_id: str) -> str:
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+
+        challenge = EmailVerificationToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expires_at=expires_at
+        )
+        db.add(challenge)
+        await db.commit()
+        return raw_token
+
+    @classmethod
+    async def verify_email_token(cls, db: AsyncSession, raw_token: str) -> Optional[User]:
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        stmt = select(EmailVerificationToken).filter(
+            EmailVerificationToken.token_hash == token_hash,
+            EmailVerificationToken.consumed_at.is_(None)
+        )
+        res = await db.execute(stmt)
+        record = res.scalars().first()
+        if not record:
+            return None
+
+        now = datetime.now(timezone.utc)
+        expires = record.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < now:
+            return None
+
+        record.consumed_at = now
+        user_res = await db.execute(select(User).filter(User.id == record.user_id))
+        user = user_res.scalars().first()
+        if user:
+            user.email_verified_at = now
+            user.account_status = "ACTIVE"
+            await db.commit()
+            return user
+        return None
+
+    @classmethod
+    async def create_password_reset_challenge(cls, db: AsyncSession, user_id: str) -> str:
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
+
+        challenge = PasswordResetToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expires_at=expires_at
+        )
+        db.add(challenge)
+        await db.commit()
+        return raw_token
+
+    @classmethod
+    async def reset_password_with_token(cls, db: AsyncSession, raw_token: str, new_password: str) -> Optional[User]:
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        stmt = select(PasswordResetToken).filter(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.consumed_at.is_(None)
+        )
+        res = await db.execute(stmt)
+        record = res.scalars().first()
+        if not record:
+            return None
+
+        now = datetime.now(timezone.utc)
+        expires = record.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < now:
+            return None
+
+        record.consumed_at = now
+        user_res = await db.execute(select(User).filter(User.id == record.user_id))
+        user = user_res.scalars().first()
+        if user:
+            user.hashed_password = cls.hash_password(new_password)
+            user.updated_at = now
+            await db.commit()
+            return user
+        return None
