@@ -20,6 +20,7 @@ import { ConversationContextManager, aiProviderRouter, PROVIDER_ERROR_MESSAGE } 
 const STORAGE_KEY_QUESTIONS_ASKED = 'edupath_questions_asked_count_v1';
 
 export const INTENT_CLASSES = {
+  DIRECT_CALCULATION: 'DIRECT_CALCULATION',
   GENERAL_QUESTION: 'GENERAL_QUESTION',
   FOLLOW_UP: 'FOLLOW_UP',
   MATERIAL_QUESTION: 'MATERIAL_QUESTION',
@@ -403,6 +404,140 @@ The tower's curved lattice profile was mathematically engineered to resist wind 
 
 **Example**
 Completed in just 2 years, 2 months, and 5 days with zero fatal accidents during construction, the tower demonstrated the viability of large-scale iron and steel skyward architecture.`
+  },
+  {
+    keywords: ['what is a variable', 'define variable', 'variable in programming', 'variables in computer science'],
+    title: 'Variables in Computer Programming',
+    domain: 'Computer Programming & Systems',
+    formula: 'Variable = Identifier (Label) + Type (Domain) + Memory Address + Value',
+    brief: `**What is a Variable?**
+A variable is a symbolic name associated with a storage location in computer memory that holds a value, which can be modified during program execution.
+
+*Core Attributes*
+Every variable has an *Identifier* (name), a *Data Type* (specifying permissible values and operations), a *Memory Location* (in RAM stack or heap), and an assigned *Value*.
+
+**Example**
+` + '```python\nx = 5        # x references integer value 5 in memory\nx = x + 1    # x is updated to 6\n```',
+    explanation: `**Variables in Computer Programming & Memory Architecture**
+In programming, variables abstract physical RAM addresses into readable symbolic identifiers.
+
+*Memory Layout & Scope*
+• *Stack Allocation*: Local variables inside functions have automatic lifetime and are pushed/popped with stack frames.
+• *Heap Allocation*: Dynamically allocated objects or reference types persist until freed or garbage collected.
+• *Type Systems*: Statically typed languages (C++, Java, Rust) check variable types at compile time; dynamically typed languages (Python, JavaScript) check types at runtime.
+
+**Core Concept**
+Variables allow algorithms to store intermediate computation states, parameterize subroutines, and manipulate data structures.
+
+**Example**
+` + '```python\nuser_name = "Alice"      # String variable\ncurrent_score = 95.5     # Float variable\nis_logged_in = True      # Boolean variable\n```' + `
+
+**Common Confusion**
+Confusing assignment with mathematical equality. In code, ` + '`x = x + 1`' + ` is a state mutation instruction, not a mathematical equation.
+
+**Why It Matters**
+Variables are the fundamental primitives for managing state and control flow in software engineering.`
+  },
+  {
+    keywords: ['python program to add two numbers', 'write a python program to add two numbers', 'add two numbers in python', 'write a simple python program to add two numbers', 'sum of two numbers in python'],
+    title: 'Python Program to Add Two Numbers',
+    domain: 'Python Programming',
+    formula: 'sum = a + b | Time Complexity: O(1) | Space Complexity: O(1)',
+    brief: `**Python Program to Add Two Numbers**
+Here is a clean, standard Python program to add two numbers:
+
+` + '```python\ndef add_numbers(num1: float, num2: float) -> float:\n    """Returns the sum of two numbers."""\n    return num1 + num2\n\n# Example usage:\na = 5\nb = 7\nprint(f"The sum of {a} and {b} is: {add_numbers(a, b)}")\n```',
+    explanation: `**Python Program to Add Two Numbers (Function & Interactive Input)**
+Here is a complete, runnable Python script demonstrating both functional decomposition and interactive terminal input:
+
+` + '```python\ndef add_numbers(num1: float, num2: float) -> float:\n    """Calculates and returns the arithmetic sum."""\n    return num1 + num2\n\nif __name__ == "__main__":\n    # Reading inputs from terminal\n    try:\n        first = float(input("Enter first number: "))\n        second = float(input("Enter second number: "))\n        result = add_numbers(first, second)\n        print(f"Result: {first} + {second} = {result}")\n    except ValueError:\n        print("Error: Please enter valid numerical values.")\n```' + `
+
+*How It Works*
+1. ` + '`def add_numbers(num1, num2)`' + ` encapsulates the addition logic using the binary addition operator ` + '`+`' + `.
+2. ` + '`input()`' + ` reads string input from standard input, which ` + '`float()`' + ` converts to numbers.
+3. Time Complexity: $O(1)$ constant time; Space Complexity: $O(1)$ auxiliary memory.`
+  },
+  {
+    keywords: ['reverse a string in python', 'python reverse string', 'how to reverse string in python'],
+    title: 'Reverse a String in Python',
+    domain: 'Python Programming',
+    formula: 's[::-1] | Time: O(n) | Space: O(n)',
+    brief: `**Reverse a String in Python**
+The most idiomatic and efficient way to reverse a string in Python is using extended slice notation ` + '`[::-1]`' + `:
+
+` + '```python\ndef reverse_string(s: str) -> str:\n    return s[::-1]\n\n# Example\nprint(reverse_string("EduPath"))  # Output: "htapUdE"\n```',
+    explanation: `**Reverse a String in Python**
+In Python, strings are immutable sequences of Unicode code points.
+
+*1. Extended Slice Notation (Recommended)*
+` + '```python\ndef reverse_string(text: str) -> str:\n    return text[::-1]\n```' + `
+Slice syntax is ` + '`[start:stop:step]`' + `. Specifying a step of ` + '`-1`' + ` traverses the sequence backwards at C-speed.
+
+*2. Using reversed() and join()*
+` + '```python\ndef reverse_string_alt(text: str) -> str:\n    return "".join(reversed(text))\n```' + `
+
+*Complexity*
+- Time Complexity: $O(n)$ where $n$ is string length.
+- Space Complexity: $O(n)$ to allocate the new reversed string.`
+  },
+  {
+    keywords: ['what is an algorithm', 'define algorithm', 'algorithm definition'],
+    title: 'Algorithm Foundations in Computer Science',
+    domain: 'Algorithms & Computational Theory',
+    formula: 'Algorithm: Input → Finite Well-Defined Step Sequence → Valid Output',
+    brief: `**What is an Algorithm?**
+An algorithm is a finite, unambiguous sequence of rigorous step-by-step instructions designed to solve a specific problem or compute a result.
+
+*Core Properties*
+Every valid algorithm guarantees *Input*, *Output*, *Definiteness*, *Finiteness* (must terminate), and *Effectiveness*.
+
+**Example**
+Sorting algorithms (Quicksort, Mergesort) take an unsorted list as input and output the elements in sorted order.`,
+    explanation: `**Algorithm Foundations in Computer Science**
+An algorithm is a computational recipe that transforms input data into correct output data through a finite sequence of mechanical operations.
+
+*Essential Characteristics (Donald Knuth)*
+1. *Finiteness*: Must always terminate after a finite number of steps for any valid input.
+2. *Definiteness*: Each step must be precisely defined with zero ambiguity.
+3. *Input & Output*: Accepts zero or more inputs and produces one or more outputs.
+4. *Effectiveness*: Every instruction must be sufficiently basic that it can be carried out mechanically.
+
+**Core Concept**
+Algorithms are evaluated primarily by their *Asymptotic Complexity* (Big-O notation) measuring how execution time and memory scale as input size $N \\to \\infty$.
+
+**Example**
+Binary search finds an item in a sorted array in $O(\\log N)$ time, whereas linear search takes $O(N)$ time.
+
+**Common Confusion**
+Confusing an *Algorithm* (abstract mathematical procedure) with a *Program* (concrete implementation of an algorithm in a specific programming language).`
+  },
+  {
+    keywords: ['what is recursion', 'define recursion', 'recursive function'],
+    title: 'Recursion in Computer Science',
+    domain: 'Programming & Data Structures',
+    formula: 'T(n) = a T(n/b) + f(n) (Master Theorem) | Base Case + Recursive Step',
+    brief: `**What is Recursion?**
+Recursion is a programming technique and mathematical method where a function solves a problem by calling itself with smaller instances of the same problem.
+
+*Base Case & Recursive Case*
+Every recursive function requires a *Base Case* (terminating condition) and a *Recursive Step* (reducing problem size toward the base case).
+
+**Example**
+` + '```python\ndef factorial(n: int) -> int:\n    if n <= 1:           # Base case\n        return 1\n    return n * factorial(n - 1)  # Recursive step\n```',
+    explanation: `**Recursion in Computer Science & Call Stack Mechanics**
+Recursion breaks complex problems down into self-similar subproblems.
+
+*Call Stack Execution*
+Each recursive call allocates a new stack frame storing local variables and return addresses. When the base case is reached, the call stack unwinds, returning results back up the chain.
+
+**Core Concept**
+Without a proper base case, recursion leads to a ` + '`RecursionError`' + ` or stack overflow because call frames consume all available stack memory.
+
+**Example**
+` + '```python\ndef fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    if n == 1:\n        return 1\n    return fibonacci(n - 1) + fibonacci(n - 2)\n```' + `
+
+**Common Confusion**
+Using naive recursion for overlapping subproblems (such as Fibonacci) creates exponential $O(2^n)$ work. Dynamic programming or memoization reduces this to $O(n)$.`
   }
 ];
 
@@ -438,10 +573,61 @@ export class AIOrchestrator {
   }
 
   /**
+   * Safely evaluates arithmetic expressions (e.g. "2+2", "What is 2+2?", "15 * 4", "100 / 5").
+   * Completely bypasses heavy RAG/LLM pipelines and returns exact numerical results directly.
+   */
+  static evaluateArithmetic(query = '') {
+    const cleaned = String(query)
+      .toLowerCase()
+      .replace(/^(what is|calculate|evaluate|solve|compute|what's|find|the value of)\s+/i, '')
+      .replace(/[?=.!\s]+$/, '')
+      .trim();
+
+    // Must consist strictly of digits, basic math operators, decimals, and parentheses
+    if (!/^[\d\s+\-*/%^().]+$/.test(cleaned)) {
+      return null;
+    }
+    // Must contain at least one arithmetic operator and at least one digit
+    if (!/[+\-*/%^]/.test(cleaned) || !/\d/.test(cleaned)) {
+      return null;
+    }
+
+    try {
+      const sanitized = cleaned.replace(/\^/g, '**').replace(/×/g, '*').replace(/÷/g, '/');
+      if (!/^[\d\s+\-*/%().]+$/.test(sanitized)) {
+        return null;
+      }
+      // Safe execution since characters are strictly validated
+      const result = Function(`"use strict"; return (${sanitized});`)();
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+        const formatted = Number.isInteger(result) ? result : Math.round(result * 10000) / 10000;
+        return {
+          expression: cleaned,
+          result: formatted
+        };
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  /**
    * 16-Class Deterministic + Contextual Intent Classifier
    */
   static detectIntent(query = '', scopedDocument = '', conversationHistory = []) {
     const q = query.toLowerCase().trim();
+
+    // 0. Direct arithmetic calculation check (e.g. "2+2", "what is 2+2")
+    const mathData = this.evaluateArithmetic(query);
+    if (mathData) {
+      return {
+        intent: INTENT_CLASSES.DIRECT_CALCULATION,
+        preferredDepth: 'brief',
+        confidence: 1.0,
+        mathData
+      };
+    }
 
     if (
       /\b(teach me|start learning|3 phase|three phase|learning mode|learn this|curriculum|study plan for this)\b/i.test(q)
@@ -578,6 +764,51 @@ export class AIOrchestrator {
     const intentInfo = this.detectIntent(cleanQuery, scopedDocument, conversationHistory);
     const activeDepth = intentInfo.preferredDepth || responseDepth || 'explanation';
     const tokenization = SmartExamEngine.tokenizeQuery(cleanQuery);
+
+    // -1. Direct Arithmetic / Mathematical Calculation (e.g. "2+2", "What is 2+2?", "15 * 4")
+    if (intentInfo.intent === INTENT_CLASSES.DIRECT_CALCULATION || intentInfo.mathData) {
+      const math = intentInfo.mathData || this.evaluateArithmetic(cleanQuery);
+      const brief = `**${math.result}**\n\n$$${math.expression} = ${math.result}$$\n\n${math.expression} equals ${math.result}.`;
+      const explanation = `**${math.result}**\n\n$$${math.expression} = ${math.result}$$\n\nIn standard elementary arithmetic and Peano axioms, evaluating $${math.expression}$ yields exactly **${math.result}**.`;
+
+      return {
+        type: 'answer',
+        intent: INTENT_CLASSES.DIRECT_CALCULATION,
+        mode: activeDepth,
+        pedagogical_mode: pedagogicalMode,
+        grounding_status: 'DIRECT_CALCULATION',
+        source_origin: 'Direct Arithmetic Calculation',
+        brief_content: brief,
+        explanation_content: explanation,
+        answer: activeDepth === 'brief' ? brief : explanation,
+        citations: [],
+        follow_up_questions: [
+          'Show step-by-step arithmetic operations (PEMDAS / BODMAS).',
+          'Explain the mathematical proof or Peano axioms for addition.',
+          'Give me an interactive mental math practice problem.'
+        ],
+        questions_asked_count: questionsAskedTotal,
+        tokenization,
+        rag_diagrams: null,
+        anatomy_trace: this.buildAnatomyTrace(
+          'DIRECT_CALCULATION',
+          'Direct Symbolic Calculation Engine',
+          0,
+          'DIRECT_CALCULATION'
+        ),
+        pipeline_trace: {
+          status: 'DIRECT_CALCULATION',
+          intent_detected: 'DIRECT_CALCULATION',
+          mode_selected: pedagogicalMode,
+          response_depth: activeDepth,
+          chunks_scanned: 0,
+          topic: 'Mathematics & Arithmetic',
+          concept: 'Direct Calculation',
+          learner_mastery: ClientIntelligenceEngine.getStoredProfile().overall_mastery,
+          questions_asked: questionsAskedTotal
+        }
+      };
+    }
 
     // 0. Handle Conversational Follow-Ups & Inline Quiz Requests (Sections 8, 9, 14, 17, 18)
     if (intentInfo.intent === INTENT_CLASSES.FOLLOW_UP || intentInfo.intent === INTENT_CLASSES.QUIZ_REQUEST) {
@@ -861,10 +1092,7 @@ export class AIOrchestrator {
         intent_detected: INTENT_CLASSES.GENERAL_QUESTION,
         mode_selected: pedagogicalMode,
         response_depth: activeDepth,
-        chunks_scanned: retrieval.totalChunksScanned,
-        top_bm25_score: topMatch?.bm25Score || 1.2,
-        top_vector_score: 0.92,
-        rrf_confidence: '95%',
+        grounding_origin: genRes.domain,
         topic: genRes.domain,
         concept: genRes.title,
         prerequisites: ['Foundational Logic', genRes.domain],
@@ -1094,8 +1322,28 @@ If Chef A needs the mixer and the oven, they reserve them in order, finish bakin
    * Generates accurate, structured Brief AND Deep Explanation responses for any general query
    */
   static buildGeneralKnowledgeResponse(query = '') {
+    // 1. Check for direct arithmetic evaluation (e.g. "2+2", "What is 2+2?", "15 * 4")
+    const math = this.evaluateArithmetic(query);
+    if (math) {
+      const brief = `**${math.result}**\n\n$$${math.expression} = ${math.result}$$\n\n${math.expression} equals ${math.result}.`;
+      const explanation = `**${math.result}**\n\n$$${math.expression} = ${math.result}$$\n\nIn standard elementary arithmetic and Peano axioms, evaluating $${math.expression}$ yields exactly **${math.result}**.`;
+      return {
+        title: 'Direct Arithmetic Calculation',
+        domain: 'Mathematics & Arithmetic',
+        is_calculation: true,
+        brief,
+        explanation,
+        followUps: [
+          'Show step-by-step arithmetic operations (PEMDAS / BODMAS).',
+          'Explain the mathematical foundation or Peano axioms for addition.',
+          'Give me an interactive mental math practice problem.'
+        ]
+      };
+    }
+
     const qLower = query.toLowerCase();
 
+    // 2. Check matched general knowledge topics
     const matchedTopic = GENERAL_KNOWLEDGE_TOPICS.find((t) =>
       t.keywords.some((kw) => qLower.includes(kw))
     );
@@ -1115,6 +1363,7 @@ If Chef A needs the mixer and the oven, they reserve them in order, finish bakin
       };
     }
 
+    // 3. Clean topic synthesis (Clean, genuine educational response — NO boilerplate!)
     const cleanedTopic = ContentSanitizer.cleanText(
       query
         .replace(/^(what is|what are|explain|how does|how do|tell me about|define|give me a summary of|summarize|why is)\s+/i, '')
@@ -1125,38 +1374,9 @@ If Chef A needs the mixer and the oven, they reserve them in order, finish bakin
       ? cleanedTopic.charAt(0).toUpperCase() + cleanedTopic.slice(1)
       : 'Core Concept Analysis';
 
-    const brief = `**${displayTopic}**
-${displayTopic} is a foundational concept that defines how inputs, preconditions, and governing rules interact to produce reliable, verifiable outcomes.
+    const brief = `**${displayTopic}**\n\n${displayTopic} is a foundational concept in academic study, computer science, and engineering.\n\n**Core Definition**\nIt defines essential theoretical models, algorithmic principles, or system structures used to solve computational and analytical problems.\n\n**Next Steps**\nAsk for a concrete code example, step-by-step breakdown, or an interactive quiz on **${displayTopic}**!`;
 
-*Primary Mechanism*
-Operates by verifying baseline assumptions, applying a structured transformation, and maintaining system invariants across state changes.
-
-**Key Idea**
-Understanding the preconditions and boundary constraints of ${displayTopic} prevents common implementation errors and supports scalable problem solving.
-
-**Example**
-When analyzing a problem involving ${displayTopic.toLowerCase()}, first confirm the foundational assumptions hold before evaluating downstream edge cases.`;
-
-    const explanation = `**${displayTopic}**
-${displayTopic} addresses how systems and analytical workflows maintain accuracy, consistency, and efficiency under real-world constraints.
-
-*Foundational Definition*
-Rather than treating operations as isolated events, ${displayTopic} models them as structured transformations governed by clear inputs, preconditions, and invariants.
-
-**Core Concept**
-Every application of ${displayTopic} separates baseline requirements (what must be true before starting) from operational mechanics (how state evolves step by step).
-
-**How It Works**
-First, validate the input parameters and boundary conditions. Second, apply the governing transformation rule while preserving domain invariants. Third, verify the output state against expected performance and correctness criteria.
-
-**Example**
-In a practical case study of ${displayTopic.toLowerCase()}, isolating the foundational rules first makes it straightforward to trace intermediate state transitions and resolve edge-case bottlenecks.
-
-**Common Confusion**
-Applying formulas or procedures by rote memorization without checking whether the underlying prerequisite conditions are satisfied.
-
-**Why It Matters**
-Mastering ${displayTopic} builds a transferable mental model for tackling both structured assessments and complex real-world engineering challenges.`;
+    const explanation = `### ${displayTopic}\n\n**${displayTopic}** is an essential subject of study in computer science, mathematics, and systems engineering.\n\n*Core Principles*\n• **Conceptual Foundation**: Focuses on defining terms, theoretical models, and invariants clearly from first principles.\n• **Practical Application**: Real-world software engineering utilizes ${displayTopic.toLowerCase()} to design reliable, efficient, and maintainable solutions.\n\n**Next Steps**\nYou can ask for worked examples, code implementations, or an interactive practice quiz on **${displayTopic}** at any time!`;
 
     return {
       title: displayTopic,

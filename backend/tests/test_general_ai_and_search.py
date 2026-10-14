@@ -141,3 +141,92 @@ async def test_arcade_games_api_and_xp():
         assert res_xp.status_code == 200
         data_xp = res_xp.json()
         assert data_xp["xp_earned"] >= 10
+
+
+@pytest.mark.asyncio
+async def test_math_arithmetic_2_plus_2_correctness():
+    """CRITICAL REGRESSION TEST: Verifies 2+2 returns 4 directly and NOT irrelevant boilerplate."""
+    async with AsyncSessionLocal() as db:
+        res = await GroundedTutorService.ask(
+            db=db,
+            course_id=None,
+            query="2+2",
+            mode="beginner",
+            scope="open"
+        )
+        assert res is not None
+        answer = res["answer"]
+        # Must contain 4
+        assert "4" in answer
+        # Must NEVER contain the irrelevant preconditions/governing rules boilerplate
+        assert "inputs, preconditions, and governing rules" not in answer.lower()
+        assert "domain invariants" not in answer.lower()
+        # Related questions must be math-specific
+        assert len(res["related_questions"]) >= 3
+        assert any("arithmetic" in q.lower() or "math" in q.lower() or "addition" in q.lower() for q in res["related_questions"])
+
+        # Also test with question phrasing
+        res2 = await GroundedTutorService.ask(
+            db=db,
+            course_id=None,
+            query="What is 2 + 2?",
+            mode="beginner",
+            scope="open"
+        )
+        assert "4" in res2["answer"]
+
+        # Also test multiplication
+        res3 = await GroundedTutorService.ask(
+            db=db,
+            course_id=None,
+            query="calculate 15 * 4",
+            mode="beginner",
+            scope="open"
+        )
+        assert "60" in res3["answer"]
+
+
+@pytest.mark.asyncio
+async def test_code_generation_request():
+    """Verifies that programming requests return genuine working code blocks."""
+    async with AsyncSessionLocal() as db:
+        res = await GroundedTutorService.ask(
+            db=db,
+            course_id=None,
+            query="Write a simple Python program to add two numbers",
+            mode="beginner",
+            scope="open"
+        )
+        assert res is not None
+        answer = res["answer"]
+        assert "```python" in answer
+        assert "def add_numbers" in answer or "return" in answer
+        assert "inputs, preconditions, and governing rules" not in answer.lower()
+
+
+@pytest.mark.asyncio
+async def test_foundational_definitions():
+    """Verifies accurate foundational definitions for variables and photosynthesis."""
+    async with AsyncSessionLocal() as db:
+        # 1. Variable
+        res_var = await GroundedTutorService.ask(
+            db=db,
+            course_id=None,
+            query="What is a variable?",
+            mode="beginner",
+            scope="open"
+        )
+        assert "storage" in res_var["answer"].lower() or "identifier" in res_var["answer"].lower()
+        assert "inputs, preconditions, and governing rules" not in res_var["answer"].lower()
+
+        # 2. Photosynthesis
+        res_photo = await GroundedTutorService.ask(
+            db=db,
+            course_id=None,
+            query="Define photosynthesis",
+            mode="beginner",
+            scope="open"
+        )
+        assert "glucose" in res_photo["answer"].lower() or "chlorophyll" in res_photo["answer"].lower() or "light" in res_photo["answer"].lower()
+        assert "inputs, preconditions, and governing rules" not in res_photo["answer"].lower()
+

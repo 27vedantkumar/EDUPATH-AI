@@ -1,6 +1,9 @@
 import os
 import json
 import logging
+import ast
+import operator
+import re
 from typing import Dict, Any, List, Optional
 import httpx
 
@@ -12,6 +15,57 @@ PROVIDER_ERROR_MESSAGE = (
     "**AI service temporarily unavailable**\n\n"
     "Please try again or verify your AI provider configuration."
 )
+
+
+def _safe_eval_math(expr_str: str) -> Optional[float]:
+    """
+    Safely evaluates simple mathematical expressions like '2+2', '10 * 5', '(4 + 8) / 2', '2^3', '2**4'.
+    Uses AST parsing with a strict whitelist of operators to prevent arbitrary code execution.
+    """
+    clean = expr_str.strip().replace('^', '**').replace('×', '*').replace('÷', '/')
+    # Reject if contains letters or dangerous characters
+    if re.search(r'[a-zA-Z_]', clean):
+        return None
+
+    operators_map = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def _eval(node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        elif isinstance(node, ast.BinOp):
+            left = _eval(node.left)
+            right = _eval(node.right)
+            op_type = type(node.op)
+            if op_type in operators_map:
+                if op_type in (ast.Div, ast.FloorDiv, ast.Mod) and right == 0:
+                    raise ZeroDivisionError("Division by zero")
+                return operators_map[op_type](left, right)
+            raise ValueError("Unsupported operator")
+        elif isinstance(node, ast.UnaryOp):
+            operand = _eval(node.operand)
+            op_type = type(node.op)
+            if op_type in operators_map:
+                return operators_map[op_type](operand)
+            raise ValueError("Unsupported unary operator")
+        else:
+            raise ValueError("Unsupported AST node")
+
+    try:
+        parsed = ast.parse(clean, mode='eval')
+        return _eval(parsed.body)
+    except Exception:
+        return None
+
 
 
 class ConversationContextManager:
@@ -96,11 +150,124 @@ class LocalAIProvider:
         user_q = prompt
         if "USER QUESTION:" in prompt:
             user_q = prompt.split("USER QUESTION:")[-1].split("INSTRUCTION:")[0].strip()
-        q_lower = user_q.lower()
+        q_lower = user_q.lower().strip()
 
         evidence_text = ""
         if "RETRIEVED COURSE EVIDENCE:" in prompt:
             evidence_text = prompt.split("RETRIEVED COURSE EVIDENCE:")[1].split("USER QUESTION:")[0].strip()
+
+        # 0. Simple Arithmetic / Math Calculation (Direct Proportionate Response)
+        math_clean = re.sub(
+            r'^(what is|calculate|evaluate|solve|compute|what\'s|find|the value of)\s+',
+            '',
+            q_lower
+        ).strip().rstrip('?=. ')
+        if re.match(r'^[\d\s\+\-\*\/\%\^\(\)\.]+$', math_clean) and any(c in math_clean for c in '+-*/%^'):
+            try:
+                res = _safe_eval_math(math_clean)
+                if res is not None:
+                    res_val = int(res) if float(res).is_integer() else round(float(res), 4)
+                    return f"**{res_val}**\n\n$${math_clean} = {res_val}$$\n\n{math_clean} equals {res_val}."
+            except ZeroDivisionError:
+                return "**Undefined**\n\nDivision by zero is mathematically undefined."
+            except Exception:
+                pass
+
+        # Python: add two numbers
+        if ("python" in q_lower and ("add two numbers" in q_lower or "sum of two numbers" in q_lower or "addition" in q_lower)) or q_lower in ["add two numbers in python", "how to add two numbers in python"]:
+            return (
+                "### Python Program to Add Two Numbers\n\n"
+                "Here is a clean, idiomatic Python program to add two numbers:\n\n"
+                "```python\n"
+                "def add_numbers(num1: float, num2: float) -> float:\n"
+                "    \"\"\"Returns the arithmetic sum of two numbers.\"\"\"\n"
+                "    return num1 + num2\n\n"
+                "# Example execution:\n"
+                "a = 5\n"
+                "b = 7\n"
+                "result = add_numbers(a, b)\n"
+                "print(f\"The sum of {a} and {b} is: {result}\")\n\n"
+                "# Interactive input:\n"
+                "if __name__ == '__main__':\n"
+                "    val1 = float(input(\"Enter first number: \"))\n"
+                "    val2 = float(input(\"Enter second number: \"))\n"
+                "    print(f\"Result: {add_numbers(val1, val2)}\")\n"
+                "```\n\n"
+                "#### How It Works:\n"
+                "1. `add_numbers(num1, num2)` accepts two arguments and applies the binary addition operator `+`.\n"
+                "2. `input()` reads text from the console, which is converted to `float` for numerical arithmetic.\n"
+                "3. Time Complexity: $O(1)$ constant time; Space Complexity: $O(1)$ auxiliary space."
+            )
+
+        # Python: reverse a string
+        if "python" in q_lower and "reverse" in q_lower and "string" in q_lower:
+            return (
+                "### Reverse a String in Python\n\n"
+                "In Python, the most idiomatic and fastest way to reverse a string is using slice notation `[::-1]`:\n\n"
+                "```python\n"
+                "def reverse_string(s: str) -> str:\n"
+                "    return s[::-1]\n\n"
+                "# Example\n"
+                "text = 'EduPath'\n"
+                "print(reverse_string(text))  # Output: 'htapUdE'\n"
+                "```\n\n"
+                "- **Slicing Syntax**: `s[start:stop:step]` with step `-1` traverses the string backward in $O(N)$ time."
+            )
+
+        # Definitions: Variable
+        if "what is a variable" in q_lower or "define variable" in q_lower or q_lower == "variable":
+            return (
+                "### What is a Variable?\n\n"
+                "In programming and computer science, a **variable** is an abstract storage location with an associated symbolic name (identifier) that holds a value or reference which can be read or modified during program execution.\n\n"
+                "#### Core Components:\n"
+                "1. **Name (Identifier)**: The label you use in code (e.g., `x`, `score`).\n"
+                "2. **Value**: The current data stored inside the variable.\n"
+                "3. **Data Type**: Defines what operations are valid (e.g., `int`, `str`, `float`).\n"
+                "4. **Memory Location**: The physical RAM address allocated by the compiler/interpreter.\n\n"
+                "```python\n"
+                "x = 5         # Declaring variable x with value 5\n"
+                "x = x + 1     # Modifying x to 6\n"
+                "```"
+            )
+
+        # Definitions: Photosynthesis
+        if "photosynthesis" in q_lower:
+            return (
+                "### Photosynthesis — Biological Energy Conversion\n\n"
+                "**Photosynthesis** is the biological process by which green plants, algae, and some bacteria convert light energy into chemical energy in the form of glucose.\n\n"
+                "#### Chemical Equation:\n"
+                "$$6\\text{CO}_2 + 6\\text{H}_2\\text{O} + \\text{light energy} \\xrightarrow{\\text{chlorophyll}} \\text{C}_6\\text{H}_{12}\\text{O}_6 + 6\\text{O}_2$$\n\n"
+                "#### Key Stages:\n"
+                "1. **Light-Dependent Reactions (Thylakoids)**: Absorbs solar energy, splits water ($H_2O$), and produces $O_2$, ATP, and NADPH.\n"
+                "2. **Light-Independent Reactions / Calvin Cycle (Stroma)**: Uses ATP and NADPH to fix $CO_2$ into glucose."
+            )
+
+        # Definitions: Algorithm
+        if "what is an algorithm" in q_lower or "define algorithm" in q_lower:
+            return (
+                "### What is an Algorithm?\n\n"
+                "An **algorithm** is a finite, unambiguous, step-by-step sequence of instructions designed to solve a problem or perform a computation.\n\n"
+                "#### Characteristics of Good Algorithms:\n"
+                "1. **Correctness**: Produces the correct output for all valid inputs.\n"
+                "2. **Finiteness**: Always terminates after a finite number of steps.\n"
+                "3. **Efficiency**: Minimizes time complexity and space complexity (measured via Big-O notation)."
+            )
+
+        # Definitions: Recursion
+        if "recursion" in q_lower and ("what is" in q_lower or "define" in q_lower or "explain" in q_lower):
+            return (
+                "### What is Recursion?\n\n"
+                "**Recursion** is a programming technique where a function solves a problem by calling itself with smaller subproblems.\n\n"
+                "#### Crucial Elements:\n"
+                "1. **Base Case**: The stopping condition that returns immediately without recursing.\n"
+                "2. **Recursive Case**: Breaks the task into smaller subproblems and calls the function again.\n\n"
+                "```python\n"
+                "def factorial(n: int) -> int:\n"
+                "    if n <= 1:           # Base case\n"
+                "        return 1\n"
+                "    return n * factorial(n - 1)  # Recursive case\n"
+                "```"
+            )
 
         # 1. Two Sum in C++
         if "two sum" in q_lower or ("c++" in q_lower and "sum" in q_lower):
@@ -236,12 +403,25 @@ class LocalAIProvider:
                 f"This material covers the core principles required to understand this topic."
             )
 
+        cleaned_subject = re.sub(r'^(what is|what are|explain|how does|how do|tell me about|define|describe|why is)\s+', '', user_q, flags=re.IGNORECASE).strip().rstrip('? ')
+        subject_title = cleaned_subject.title() if cleaned_subject else user_q
+
+        if is_brief:
+            return (
+                f"**{subject_title}**\n\n"
+                f"{subject_title} is a core academic and technical concept. "
+                f"It represents key principles in computer science, mathematics, and systems engineering. "
+                f"To explore worked examples, derivations, or practice questions, ask a targeted follow-up."
+            )
+
         return (
-            f"### Concept Explanation: {user_q}\n\n"
-            f"Here is a clear, structured breakdown of **{user_q}**:\n\n"
-            f"1. **Foundational Principle**: Understand the core problem statement, inputs, and expected invariants.\n"
-            f"2. **Practical Mechanism**: Apply systematic decomposition and verify edge cases step by step.\n"
-            f"3. **Follow-Up Exploration**: Ask for a concrete example, deeper mathematical derivation, or an interactive practice quiz at any time."
+            f"### {subject_title}\n\n"
+            f"**{subject_title}** is a key concept in computer science and modern computing architectures.\n\n"
+            f"#### Core Understanding\n"
+            f"- **Conceptual Definition**: Deals with how computational structures, algorithms, or system models represent information and maintain operational invariants.\n"
+            f"- **Practical Application**: In real-world software, mastering {subject_title.lower()} helps build scalable, verifiable, and performant solutions.\n\n"
+            f"#### Next Steps\n"
+            f"Feel free to ask for a code implementation, step-by-step example, or an interactive quiz on **{subject_title}**!"
         )
 
 

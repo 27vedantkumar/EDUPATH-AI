@@ -146,7 +146,6 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
       chunks_scanned: 8,
       top_bm25_score: 4.8,
       top_vector_score: 0.98,
-      rrf_confidence: '98%',
       topic: 'Deadlocks & General AI',
       concept: 'RAG Enhanced Chatbot & Bayesian Active Learning',
       prerequisites: ['Resource Allocation', 'Processes & Threads'],
@@ -414,7 +413,7 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
   const masteryPercent = Math.round((user?.profile?.overall_mastery || 0.68) * 100);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-6xl mx-auto p-4 sm:p-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-5xl mx-auto p-3 sm:p-5 space-y-3">
       {/* Top Controls: 3-Way Studio Switcher, Brief/Explanation Toggle, Dynamic Scope & Learning Information */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-lg space-y-3 shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -648,12 +647,22 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
                     {!isUser && msg.status && (
                       <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-200 dark:border-slate-800">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {msg.status === 'SUPPORTED' && (
+                          {(msg.status === 'DIRECT_CALCULATION' || msg.intent === 'DIRECT_CALCULATION') && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                              <Zap className="w-3 h-3 text-emerald-400" /> Direct Calculation
+                            </span>
+                          )}
+                          {(msg.is_web_grounded || (msg.web_sources && msg.web_sources.length > 0)) && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                              <Globe className="w-3 h-3 text-emerald-400" /> Live Web Evidence
+                            </span>
+                          )}
+                          {msg.status === 'SUPPORTED' && !msg.is_web_grounded && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               <ShieldCheck className="w-3 h-3" /> Grounded in Course Material
                             </span>
                           )}
-                          {msg.status === 'GENERAL_AI' && (
+                          {msg.status === 'GENERAL_AI' && !msg.is_web_grounded && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-300 border border-sky-500/25">
                               <Globe className="w-3 h-3" />{' '}
                               {msg.source_origin || 'General Knowledge & AI Reasoning'}
@@ -675,11 +684,11 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
                             <button
                               onClick={() => toggleTrace(msg.id)}
                               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/25 transition-colors"
-                              title="Inspect 5-Stage RAG Pipeline & Learner Mastery Trace"
+                              title="Inspect Reasoning & Execution Trace"
                             >
                               <Cpu className="w-3 h-3" />
                               <span>
-                                Learning & RAG Context ({trace.rrf_confidence || '98%'})
+                                Pipeline & Context Trace
                               </span>
                               {isTraceOpen ? (
                                 <ChevronUp className="w-3 h-3" />
@@ -1024,7 +1033,7 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
             <button
               type="button"
               onClick={() => setLiveWebSearchEnabled(!liveWebSearchEnabled)}
-              className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
                 liveWebSearchEnabled
                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-sm'
                   : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
@@ -1032,28 +1041,13 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
               title="Toggle Live Web Grounding & Citations"
             >
               <Globe className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Web Search: {liveWebSearchEnabled ? 'ON' : 'OFF'}</span>
-            </button>
-            <button
-              onClick={() => setActiveStudioView('mentor')}
-              className="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold hidden md:flex items-center gap-1.5 shrink-0 transition-all"
-              title="Open Smart Exam Mentor (MCQ, Fill-in-Blanks, True/False, FAQ, Podcast & ELI12)"
-            >
-              <Headphones className="w-3.5 h-3.5" />
-              <span>Smart Exam Mentor</span>
-            </button>
-            <button
-              onClick={() => setActiveStudioView('phases')}
-              className="px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold hidden sm:flex items-center gap-1.5 shrink-0 transition-all"
-              title="Open 3-Phase Adaptive Learning & Grand Quiz Studio"
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>3-Phase Studio</span>
+              <span>Web Search: {liveWebSearchEnabled ? 'ON' : 'OFF'}</span>
             </button>
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || loading}
-              className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shrink-0"
+              className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-all shadow-md shrink-0 cursor-pointer"
+              title="Send message (Enter)"
             >
               <Send className="w-4 h-4" />
             </button>

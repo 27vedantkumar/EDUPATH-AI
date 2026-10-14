@@ -69,7 +69,13 @@ class WebSearchService:
         if explicit_search:
             return True
 
-        q_lower = query.lower()
+        q_lower = query.lower().strip()
+
+        # Simple math/arithmetic queries must never trigger web search
+        math_clean = re.sub(r'^(what is|calculate|evaluate|solve|compute|what\'s|find)\s+', '', q_lower).strip().rstrip('?=. ')
+        if re.match(r'^[\d\s\+\-\*\/\%\^\(\)\.]+$', math_clean) and any(c in math_clean for c in '+-*/%^'):
+            return False
+
         if any(term in q_lower for term in cls.SEARCH_TRIGGER_TERMS):
             return True
 

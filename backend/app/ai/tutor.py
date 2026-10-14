@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict, Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -66,6 +67,26 @@ class GroundedTutorService:
         q_clean = query.strip().rstrip("?").lower()
 
         # 1. Topic-tailored questions
+        # Math & arithmetic calculations (e.g. 2+2, calculate 15 * 4)
+        math_check = re.sub(r'^(what is|calculate|evaluate|solve|compute|what\'s|find)\s+', '', q_clean).strip().rstrip('?=. ')
+        if re.match(r'^[\d\s\+\-\*\/\%\^\(\)\.]+$', math_check) and any(c in math_check for c in '+-*/%^') and any(c.isdigit() for c in math_check):
+            return [
+                "Show step-by-step arithmetic operations and order of operations (PEMDAS / BODMAS).",
+                "Explain the foundational mathematical proofs and Peano axioms for addition.",
+                "Give me an interactive mental math practice problem."
+            ]
+        if "variable" in q_clean:
+            return [
+                "What is the difference between mutable and immutable variables in programming?",
+                "How does variable scope and lifetime operate in memory (Stack vs. Heap)?",
+                "How do statically typed and dynamically typed languages handle variable types?"
+            ]
+        if "photosynthesis" in q_clean:
+            return [
+                "What is the difference between the light reactions and the Calvin cycle?",
+                "Why are chlorophyll pigments specifically tuned to absorb blue and red light?",
+                "How do environmental factors like temperature and CO2 limit photosynthetic rate?"
+            ]
         if "two sum" in q_clean or "hash map" in q_clean:
             return [
                 "How does the hash map approach compare to the two-pointer technique on sorted arrays?",

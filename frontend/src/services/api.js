@@ -255,8 +255,16 @@ export const api = {
       brief_content: res?.answer || orchestrated.brief_content,
       explanation_content: res?.answer || orchestrated.explanation_content,
       intent: res?.intent || orchestrated.intent,
-      source_origin: res?.is_web_grounded ? 'Live Web Research & Authoritative Sources' : (res?.source_origin || orchestrated.source_origin),
-      grounding_status: (res?.grounded || orchestrated.grounding_status) ? 'SUPPORTED' : 'OPEN',
+      source_origin: res?.is_web_grounded
+        ? 'Live Web Research & Authoritative Sources'
+        : (orchestrated.source_origin || res?.source_origin || 'General Knowledge & AI Reasoning'),
+      grounding_status: orchestrated.grounding_status === 'DIRECT_CALCULATION'
+        ? 'DIRECT_CALCULATION'
+        : res?.is_web_grounded
+        ? 'WEB_GROUNDED'
+        : (res?.is_course_grounded || orchestrated.grounding_status === 'SUPPORTED')
+        ? 'SUPPORTED'
+        : (orchestrated.grounding_status || 'GENERAL_AI'),
       anatomy_trace: orchestrated.anatomy_trace,
       citations: (res && res.citations && res.citations.length > 0) ? res.citations : orchestrated.citations,
       web_sources: res?.web_sources || [],
