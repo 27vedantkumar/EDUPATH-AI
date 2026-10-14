@@ -6,6 +6,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { IngestionModal } from './components/common/IngestionModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AuthPage } from './pages/AuthPage';
+import { FloatingStudyBuddy } from './components/common/FloatingStudyBuddy';
 import { Sparkles } from 'lucide-react';
 
 import { DashboardPage } from './pages/DashboardPage';
@@ -168,6 +169,8 @@ const AppContent = () => {
         }}
         onNavigateWithContext={handleNavigateWithContext}
       />
+
+      <FloatingStudyBuddy onNavigateToTutor={setCurrentTab} />
     </div>
   );
 };

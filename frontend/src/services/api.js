@@ -245,22 +245,27 @@ export const api = {
         response_depth: responseDepth,
         course_id: courseId,
         scope_location: scopeLocation,
-        language
+        language,
+        enable_web_search: options?.enable_web_search
       })
     }, () => orchestrated).then((res) => ({
       ...orchestrated,
       ...(res || {}),
-      answer: orchestrated.answer,
-      brief_content: orchestrated.brief_content,
-      explanation_content: orchestrated.explanation_content,
-      intent: orchestrated.intent,
-      source_origin: orchestrated.source_origin,
-      grounding_status: orchestrated.grounding_status,
+      answer: res?.answer || orchestrated.answer,
+      brief_content: res?.answer || orchestrated.brief_content,
+      explanation_content: res?.answer || orchestrated.explanation_content,
+      intent: res?.intent || orchestrated.intent,
+      source_origin: res?.is_web_grounded ? 'Live Web Research & Authoritative Sources' : (res?.source_origin || orchestrated.source_origin),
+      grounding_status: (res?.grounded || orchestrated.grounding_status) ? 'SUPPORTED' : 'OPEN',
       anatomy_trace: orchestrated.anatomy_trace,
       citations: (res && res.citations && res.citations.length > 0) ? res.citations : orchestrated.citations,
+      web_sources: res?.web_sources || [],
+      is_web_grounded: res?.is_web_grounded || false,
+      is_course_grounded: res?.is_course_grounded || false,
+      related_questions: res?.related_questions || orchestrated.follow_up_questions,
       pipeline_trace: orchestrated.pipeline_trace,
-      follow_up_questions: orchestrated.follow_up_questions,
-      recommended_next_action: orchestrated.recommended_next_action,
+      follow_up_questions: res?.related_questions || orchestrated.follow_up_questions,
+      recommended_next_action: res?.recommended_action || orchestrated.recommended_next_action,
       questions_asked_count: orchestrated.questions_asked_count
     }));
   },
@@ -451,10 +456,27 @@ export const api = {
   },
 
   // Educational Games
+  async listGames() {
+    return resilientFetch(`${API_BASE}/games`, {}, () => []);
+  },
+
   async getGameData(gameType, courseId = 'OS_101') {
     return resilientFetch(`${API_BASE}/games/${gameType}?course_id=${courseId}`, {}, () => ({
       game: gameType,
       items: []
+    }));
+  },
+
+  async awardGameXP(gameType, score) {
+    return resilientFetch(`${API_BASE}/games/award-xp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game_type: gameType, score })
+    }, () => ({
+      xp_earned: Math.min(50, Math.max(10, Math.floor(score / 2))),
+      level: 6,
+      leveled_up: false,
+      reason: `Completed ${gameType}`
     }));
   }
 };
