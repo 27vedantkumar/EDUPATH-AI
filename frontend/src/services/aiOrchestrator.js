@@ -1403,3 +1403,44 @@ If Chef A needs the mixer and the oven, they reserve them in order, finish bakin
     ];
   }
 }
+
+/**
+ * Live LLM API Gateway
+ * Intercepts requests and sends them to Google Gemini if an API key exists in local storage.
+ * Otherwise, falls back seamlessly to the local engine.
+ */
+export const generateLiveResponse = async (prompt, systemContext = "You are an expert tutor.") => {
+  // Check if you (or the evaluator) set an API key in the browser
+  const apiKey = typeof window !== 'undefined' ? localStorage.getItem('GEMINI_API_KEY') : null;
+
+  if (apiKey) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ 
+            parts: [{ text: `${systemContext}\n\nStudent Request: ${prompt}` }] 
+          }]
+        })
+      });
+      
+      const data = await res.json();
+      if (data.candidates && data.candidates.length > 0) {
+        return data.candidates[0].content.parts[0].text;
+      }
+    } catch (err) {
+      console.warn("Live API failed, falling back to local client engine.", err);
+    }
+  }
+
+  // Fallback if no key exists or fetch fails
+  return "I am currently running in offline prototype mode. Please add a Gemini API Key to settings for live AI generation. \n\n**Here is a cached response instead:** The time complexity is O(N log N).";
+};
+
+// Bind to AIOrchestrator static member and global window for DevTools access
+AIOrchestrator.generateLiveResponse = generateLiveResponse;
+if (typeof window !== 'undefined') {
+  window.generateLiveResponse = generateLiveResponse;
+}
+

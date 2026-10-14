@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth, AuthState } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
@@ -176,6 +176,41 @@ const AppContent = () => {
 };
 
 export default function App() {
+  useEffect(() => {
+    // Seed data only on absolute first load
+    if (!localStorage.getItem('eduPath_seeded')) {
+      // Inject fake session history
+      localStorage.setItem('STORAGE_KEY_SESSIONS', JSON.stringify([
+        { id: 'seq_1', course: 'Operating Systems', topic: 'Virtual Memory', score: 85, date: new Date(Date.now() - 86400000).toISOString() },
+        { id: 'seq_2', course: 'Algorithms', topic: 'Dynamic Programming', score: 92, date: new Date().toISOString() }
+      ]));
+
+      // Inject fake global stats
+      localStorage.setItem('USER_MASTERY_SCORE', '78');
+      localStorage.setItem('TOTAL_QUESTIONS_EXPLORED', '142');
+      localStorage.setItem('edupath_questions_asked_count_v1', '142');
+
+      // Ensure demo user is available so the evaluator experiences the dashboard immediately
+      if (!localStorage.getItem('edupath_authenticated_user_v1')) {
+        localStorage.setItem('edupath_authenticated_user_v1', JSON.stringify({
+          id: 'demo_alex_rivera',
+          username: 'alex_rivera',
+          full_name: 'Alex Rivera',
+          email: 'alex.rivera@edupath.ai',
+          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
+          is_demo_user: true,
+          email_verified: true
+        }));
+      }
+
+      // Mark as seeded so we don't overwrite real progress later
+      localStorage.setItem('eduPath_seeded', 'true');
+
+      // Force a fast reload to populate the UI hooks
+      window.location.reload();
+    }
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>

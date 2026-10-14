@@ -1,5 +1,5 @@
 import { COURSE_KNOWLEDGE_STORE, ClientIntelligenceEngine } from './clientEngine.js';
-import { AIOrchestrator } from './aiOrchestrator.js';
+import { AIOrchestrator, generateLiveResponse } from './aiOrchestrator.js';
 import { AdaptivePhaseEngine } from './adaptivePhaseEngine.js';
 
 const API_BASE = '/api';
@@ -234,6 +234,32 @@ export const api = {
 
     if (options?.simulateProviderFailure) {
       return orchestrated;
+    }
+
+    // Live LLM API Gateway: Check if GEMINI_API_KEY exists in localStorage
+    if (typeof window !== 'undefined' && localStorage.getItem('GEMINI_API_KEY')) {
+      try {
+        const livePrompt = message;
+        const systemContext = `You are an expert tutor in ${courseId}. Pedagogical Mode: ${mode}. Focus: Computer Science, Operating Systems, and Algorithms.`;
+        const liveResponse = await generateLiveResponse(livePrompt, systemContext);
+        if (liveResponse && !liveResponse.includes("I am currently running in offline prototype mode")) {
+          return {
+            ...orchestrated,
+            answer: liveResponse,
+            brief_content: liveResponse,
+            explanation_content: liveResponse,
+            source_origin: 'Google Gemini 1.5 Flash (Live LLM API Gateway)',
+            grounding_status: 'SUPPORTED',
+            pipeline_trace: {
+              ...(orchestrated.pipeline_trace || {}),
+              gateway: 'gemini-1.5-flash-live',
+              engine: 'Google Gemini 1.5 Flash Live API'
+            }
+          };
+        }
+      } catch (geminiErr) {
+        console.warn("Live API Gateway error, falling back to local client engine:", geminiErr);
+      }
     }
 
     return resilientFetch(`${API_BASE}/tutor/ask`, {

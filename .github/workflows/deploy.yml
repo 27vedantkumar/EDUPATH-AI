@@ -43,6 +43,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/dist
-          user_name: 'Maanas Pandey'
-          user_email: 'krishnamanas1224@gmail.com'
+          user_name: 'Vedant Kumar'
+          user_email: 'kineticsoul001@gmail.com'
           commit_message: 'deploy(pages): automated production build from main'

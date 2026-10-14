@@ -1,6 +1,6 @@
 # EduPath AI — Multimodal Adaptive Learning Companion
 
-[![Live Deployment](https://img.shields.io/badge/Live_Deployment-GitHub_Pages-6366f1.svg?style=for-the-badge&logo=github)](https://manas0306-ops.github.io/MultiModal-Study-Platform/)
+[![Live Deployment](https://img.shields.io/badge/Live_Deployment-GitHub_Pages-6366f1.svg?style=for-the-badge&logo=github)](https://27vedantkumar.github.io/EDUPATH-AI/)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 [![Backend](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi)]()
 [![Frontend](https://img.shields.io/badge/React-19.0+-61DAFB.svg?logo=react)]()
@@ -8,7 +8,7 @@
 [![Grounding](https://img.shields.io/badge/Grounding_Gate-Live_Web_+_RAG-indigo.svg)]()
 
 > **🚀 LIVE APPLICATION URL:**  
-> **[https://manas0306-ops.github.io/MultiModal-Study-Platform/](https://manas0306-ops.github.io/MultiModal-Study-Platform/)**  
+> **[https://27vedantkumar.github.io/EDUPATH-AI/](https://27vedantkumar.github.io/EDUPATH-AI/)**  
 > *(Click above or open via the repository's "Deployments" section on the right sidebar)*
 >
 > ⚡ **Hackathon Evaluator 1-Click Access:** When opening the application, click **"⚡ 1-Click Evaluator Demo Access (Alex Rivera)"** for instant, fully verified access with pre-seeded course mastery, flashcards, and diagnostic state! Alternatively, register with any valid email address.

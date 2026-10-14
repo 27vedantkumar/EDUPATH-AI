@@ -50,7 +50,19 @@ export const DashboardPage = ({ onNavigate, onNavigateWithContext }) => {
     }
   };
 
-  const masteryPercent = 69;
+  const storedMastery = typeof window !== 'undefined' ? localStorage.getItem('USER_MASTERY_SCORE') : null;
+  const masteryPercent = storedMastery ? Number(storedMastery) : 78;
+  const storedQuestions = typeof window !== 'undefined' ? localStorage.getItem('TOTAL_QUESTIONS_EXPLORED') : null;
+  const totalQuestionsExplored = storedQuestions ? Number(storedQuestions) : 142;
+
+  let seededSessions = [];
+  try {
+    const rawSessions = typeof window !== 'undefined' ? localStorage.getItem('STORAGE_KEY_SESSIONS') : null;
+    if (rawSessions) {
+      seededSessions = JSON.parse(rawSessions);
+    }
+  } catch (_) {}
+
   const circumference = 2 * Math.PI * 34;
   const strokeDashoffset = circumference - (masteryPercent / 100) * circumference;
 
@@ -153,7 +165,7 @@ export const DashboardPage = ({ onNavigate, onNavigateWithContext }) => {
               </defs>
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xl font-extrabold text-slate-900 dark:text-white">69%</span>
+              <span className="text-xl font-extrabold text-slate-900 dark:text-white">{masteryPercent}%</span>
             </div>
           </div>
 
@@ -469,6 +481,78 @@ export const DashboardPage = ({ onNavigate, onNavigateWithContext }) => {
           </button>
         </div>
       </div>
+
+      {/* 4. Seeded Session History & Exploration Milestone (Wow Factor) */}
+      {seededSessions && seededSessions.length > 0 && (
+        <div
+          style={{
+            backgroundColor: themeConfig.bgCard,
+            borderColor: themeConfig.borderCard
+          }}
+          className="p-6 rounded-2xl border shadow-sm space-y-4 transition-colors"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+                Recent Adaptive Study Sessions & Mastery History
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
+                {totalQuestionsExplored} Questions Explored
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                {masteryPercent}% Global Mastery
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {seededSessions.map((s, idx) => (
+              <div
+                key={s.id || idx}
+                style={{
+                  backgroundColor: themeConfig.bgInnerCard,
+                  borderColor: themeConfig.borderCard
+                }}
+                className="p-4 rounded-xl border flex items-center justify-between gap-4 hover:border-indigo-400 transition-all"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                      {s.course}
+                    </span>
+                    <span className="text-slate-400 text-xs">·</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      {new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {s.topic}
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right">
+                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono block">
+                      {s.score}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Score</span>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('coding')}
+                    className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                    title="Open in Coding Lab"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

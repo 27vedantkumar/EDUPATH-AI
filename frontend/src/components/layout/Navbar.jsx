@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
-import { Sparkles, Flame, Award, BookOpen, Upload, User, ShieldCheck, Sun, Moon, Palette, LogOut, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Flame, Award, BookOpen, Upload, User, ShieldCheck, Sun, Moon, Palette, LogOut, CheckCircle2, Key, Check, X, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { generateLiveResponse } from '../../services/aiOrchestrator';
 
 export const Navbar = ({ onOpenUpload }) => {
   const { user, currentCourse, courses, setCurrentCourse, isDemo, logout } = useAuth();
   const { theme, themeConfig, isNight, toggleDayNight, setTheme, themes } = useTheme();
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [testResult, setTestResult] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+
+  useEffect(() => {
+    const key = localStorage.getItem('GEMINI_API_KEY');
+    setHasApiKey(Boolean(key));
+    if (key) setApiKeyInput(key);
+  }, [showApiKeyModal]);
 
   return (
     <header
@@ -73,6 +85,23 @@ export const Navbar = ({ onOpenUpload }) => {
 
       {/* Gamification, 4-Theme Selector & Profile */}
       <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Gemini API Key Gateway Modal Trigger */}
+        <button
+          onClick={() => {
+            setTestResult('');
+            setShowApiKeyModal(true);
+          }}
+          style={{ backgroundColor: themeConfig.bgCard, borderColor: themeConfig.borderCard }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold text-slate-800 dark:text-slate-200 hover:brightness-95 shadow-sm transition-all cursor-pointer"
+          title="Configure Google Gemini Live API Key (or offline fallback)"
+        >
+          <Key className={`w-3.5 h-3.5 ${hasApiKey ? 'text-emerald-500' : 'text-amber-500'}`} />
+          <span className="hidden sm:inline text-[11px] font-bold">
+            {hasApiKey ? 'Gemini 1.5' : 'AI Gateway'}
+          </span>
+          <span className={`w-1.5 h-1.5 rounded-full ${hasApiKey ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-amber-400 animate-pulse'}`} />
+        </button>
+
         {/* 4-Theme Mode Selector (2 Day + 2 Night) */}
         <div className="relative">
           <button
@@ -292,6 +321,132 @@ export const Navbar = ({ onOpenUpload }) => {
           )}
         </div>
       </div>
+
+      {/* Gemini API Key Gateway Configuration Modal */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in">
+          <div
+            style={{ backgroundColor: themeConfig.bgCard, borderColor: themeConfig.borderCard }}
+            className="w-full max-w-md rounded-2xl border shadow-2xl p-6 space-y-4 animate-in zoom-in-95 text-slate-900 dark:text-white"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold">Live LLM API Gateway</h3>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Google Gemini 1.5 Flash</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowApiKeyModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Gateway Status:</span>
+                <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
+                  hasApiKey
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                }`}>
+                  {hasApiKey ? '● Live Gemini Active' : '○ Offline Prototype Mode'}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Gemini API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:border-indigo-500 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const trimmed = apiKeyInput.trim();
+                    if (trimmed) {
+                      localStorage.setItem('GEMINI_API_KEY', trimmed);
+                      setHasApiKey(true);
+                    } else {
+                      localStorage.removeItem('GEMINI_API_KEY');
+                      setHasApiKey(false);
+                    }
+                    setTestResult('Key saved to localStorage successfully.');
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save Key</span>
+                </button>
+
+                {hasApiKey && (
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('GEMINI_API_KEY');
+                      setApiKeyInput('');
+                      setHasApiKey(false);
+                      setTestResult('Key removed. Reverted to local prototype mode.');
+                    }}
+                    className="py-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-bold hover:bg-rose-100 transition-all cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+
+                <button
+                  disabled={isTesting}
+                  onClick={async () => {
+                    setIsTesting(true);
+                    setTestResult('Calling generateLiveResponse()...');
+                    try {
+                      const res = await generateLiveResponse('Hello! Test connection.', 'You are an expert tutor.');
+                      setTestResult(res);
+                    } catch (err) {
+                      setTestResult('Error: ' + err.message);
+                    } finally {
+                      setIsTesting(false);
+                    }
+                  }}
+                  className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-300 dark:border-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Test Gateway</span>
+                </button>
+              </div>
+
+              {testResult && (
+                <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] max-h-36 overflow-y-auto whitespace-pre-wrap border border-slate-800">
+                  {testResult}
+                </div>
+              )}
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                <p className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <span>💡 Evaluator Quick Tip:</span>
+                </p>
+                <p>
+                  You can also paste your key directly in Chrome DevTools:
+                </p>
+                <code className="block bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-[10px] text-indigo-600 dark:text-indigo-400 font-mono">
+                  localStorage.setItem('GEMINI_API_KEY', 'your_actual_key')
+                </code>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

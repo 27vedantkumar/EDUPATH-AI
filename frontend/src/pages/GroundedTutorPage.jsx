@@ -35,6 +35,7 @@ import { EducationalContentRenderer } from '../components/common/EducationalCont
 import { AIOrchestrator, INTENT_CLASSES } from '../services/aiOrchestrator';
 import { SmartExamEngine } from '../services/smartExamEngine';
 import { AdaptivePhaseEngine } from '../services/adaptivePhaseEngine';
+import ApiKeyManager from '../components/common/ApiKeyManager';
 
 const STORAGE_KEY_CHAT_HISTORY = 'edupath_unlimited_chat_history_v1';
 
@@ -519,6 +520,8 @@ Try asking *"What is artificial intelligence?"*, *"Explain operating systems"*, 
                 <span>+ Ingest Material</span>
               </button>
             )}
+
+            <ApiKeyManager />
           </div>
         </div>
 
