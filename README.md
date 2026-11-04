@@ -13,7 +13,7 @@
 >
 > ⚡ **Hackathon Evaluator 1-Click Access:** When opening the application, click **"⚡ 1-Click Evaluator Demo Access (Alex Rivera)"** for instant, fully verified access with pre-seeded course mastery, flashcards, and diagnostic state! Alternatively, register with any valid email address.
 
----
+------
 
 ## 🌟 The Shared Intelligence Triangle
 
